@@ -182,6 +182,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
         options.Events = new JwtBearerEvents
         {
+            // The client sends the token in an HttpOnly cookie; an Authorization header (Swagger, tools) still wins
+            OnMessageReceived = context =>
+            {
+                if (string.IsNullOrEmpty(context.Request.Headers.Authorization)
+                    && context.Request.Cookies.TryGetValue(AuthCookie.Name, out var cookieToken))
+                {
+                    context.Token = cookieToken;
+                }
+                return System.Threading.Tasks.Task.CompletedTask;
+            },
             OnTokenValidated = async context =>
             {
                 var principal = context.Principal;

@@ -1,8 +1,10 @@
+using HRManagement.Authorization;
 using HRManagement.DTOs;
 using HRManagement.DTOs.Auths;
 using HRManagement.Services.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Task = System.Threading.Tasks.Task;
 
@@ -26,7 +28,42 @@ namespace HRManagement.Controllers
             if (!success)
                 return Unauthorized(new { message = error });
 
-            return Ok(new { message = "Đăng nhập thành công", Token = token });
+            // The token only travels in the HttpOnly cookie; the client gets the profile it needs to render
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            AuthCookie.Append(HttpContext, token!, jwt.ValidTo);
+
+            return Ok(new { message = "Đăng nhập thành công", user = ToSessionUser(jwt.Claims) });
+        }
+
+        /// <summary>The signed-in user, read from the cookie: the client keeps nothing in browser storage and asks on load.</summary>
+        [Authorize]
+        [HttpGet("me")]
+        public IActionResult Me() => Ok(ToSessionUser(User.Claims));
+
+        // Raw JWT claims use short names ("role"); the validated principal maps them to ClaimTypes.*
+        private static object ToSessionUser(IEnumerable<Claim> claims)
+        {
+            var list = claims.ToList();
+            string? Find(params string[] types) => list.FirstOrDefault(c => types.Contains(c.Type))?.Value;
+
+            return new
+            {
+                role = Find("role", ClaimTypes.Role),
+                userId = Find("nameid", ClaimTypes.NameIdentifier),
+                employeeId = int.TryParse(Find("employeeId"), out var employeeId) ? employeeId : (int?)null,
+                userName = Find("unique_name", ClaimTypes.Name),
+                expiresTime = long.TryParse(Find("exp"), out var exp) ? exp : 0,
+                isTopLevel = Find("IsTopLevel") == "true",
+                positionName = Find("PositionName") ?? ""
+            };
+        }
+
+        [AllowAnonymous]
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            AuthCookie.Delete(HttpContext);
+            return Ok(new { message = "Đã đăng xuất." });
         }
 
         [Authorize]
