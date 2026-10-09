@@ -10,5 +10,7 @@ namespace HRManagement.Services.Users
         Task<(bool Success, string? Error)> UpdateUserAsync(int id, UpdateUserDTO dto);
         Task<(bool Success, string? Error)> DeactivateUserAsync(int id);
         Task<(bool Success, string? Error)> ActivateUserAsync(int id);
+        Task<IEnumerable<UserEmployeeOptionDTO>> GetEmployeeOptionsAsync();
+        Task<(bool Success, string? Error)> ResetPasswordAsync(int id, ResetUserPasswordDTO dto, int currentUserId, bool canResetAdmins);
     }
 }

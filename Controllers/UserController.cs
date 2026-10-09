@@ -1,5 +1,6 @@
 using HRManagement.Authorization;
 using HRManagement.DTOs;
+using HRManagement.Services.CurrentUsers;
 using HRManagement.Services.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,13 +10,17 @@ namespace HRManagement.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    // The SuperAdmin manages a chosen company's accounts too (X-Company-Id header)
+    [SuperAdminCompanyScope]
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public UserController(IUserService userService)
+        public UserController(IUserService userService, ICurrentUserService currentUserService)
         {
             _userService = userService;
+            _currentUserService = currentUserService;
         }
 
         [RequirePermission("User.View")]
@@ -24,6 +29,14 @@ namespace HRManagement.Controllers
         {
             var users = await _userService.GetAllUsersAsync();
             return Ok(users);
+        }
+
+        /// <summary>Employees an account can be linked to, for the create / edit account forms.</summary>
+        [RequirePermission("User.Manage")]
+        [HttpGet("employee-options")]
+        public async Task<IActionResult> GetEmployeeOptions()
+        {
+            return Ok(await _userService.GetEmployeeOptionsAsync());
         }
 
         [RequirePermission("User.View")]
@@ -77,6 +90,21 @@ namespace HRManagement.Controllers
                 return BadRequest(error);
 
             return Ok("User activated");
+        }
+
+        /// <summary>Sets a new password chosen by the administrator and signs out the account's sessions.</summary>
+        [RequirePermission("User.Manage")]
+        [HttpPost("{id}/reset-password")]
+        public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetUserPasswordDTO dto)
+        {
+            var canResetAdmins = User.IsInRole(PlatformRoles.SuperAdmin) || User.IsInRole("ADMIN");
+            var (success, error) = await _userService.ResetPasswordAsync(id, dto, _currentUserService.GetUserId(), canResetAdmins);
+            if (error is null && !success)
+                return NotFound();
+            if (!success)
+                return BadRequest(new { message = error });
+
+            return Ok(new { message = "Đã đặt lại mật khẩu." });
         }
     }
 }

@@ -8,6 +8,8 @@ namespace HRManagement.Services.Users
 {
     public class UserService : IUserService
     {
+        private const string AdminRoleName = "ADMIN";
+
         private readonly IUserRepository _userRepository;
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IUserAccountValidationService _validationService;
@@ -26,6 +28,20 @@ namespace HRManagement.Services.Users
             _validationService = validationService;
             _emailService = emailService;
             _mapper = mapper;
+        }
+
+        public async Task<IEnumerable<UserEmployeeOptionDTO>> GetEmployeeOptionsAsync()
+        {
+            var employees = await _employeeRepository.GetAllEmployeesAsync();
+            return employees
+                .Select(e => new UserEmployeeOptionDTO
+                {
+                    EmployeeId = e.EmployeeId,
+                    EmployeeCode = e.EmployeeCode,
+                    FullName = e.FullName,
+                    Email = e.Email
+                })
+                .ToList();
         }
 
         public async Task<IEnumerable<UserResponseDTO>> GetAllUsersAsync()
@@ -209,6 +225,53 @@ namespace HRManagement.Services.Users
             return (true, null);
         }
 
+        /// <summary>
+        /// Đặt mật khẩu mới do quản trị viên nhập cho tài khoản, đăng xuất mọi phiên đang mở và báo cho người dùng qua email.
+        /// Tài khoản ADMIN chỉ được đặt lại bởi ADMIN / SuperAdmin, để người chỉ có quyền User.Manage không chiếm được tài khoản quản trị.
+        /// </summary>
+        public async Task<(bool Success, string? Error)> ResetPasswordAsync(int id, ResetUserPasswordDTO dto, int currentUserId, bool canResetAdmins)
+        {
+            if (string.IsNullOrWhiteSpace(dto.NewPassword))
+                return (false, "Mật khẩu mới là bắt buộc.");
+
+            if (dto.NewPassword != dto.ConfirmNewPassword)
+                return (false, "Mật khẩu mới và xác nhận mật khẩu không khớp.");
+
+            if (dto.NewPassword.Length < 6)
+                return (false, "Mật khẩu mới phải có ít nhất 6 ký tự.");
+
+            var user = await _userRepository.GetByIdWithRolesAsync(id);
+            if (user is null)
+                return (false, null);
+
+            if (user.UserId == currentUserId)
+                return (false, "Dùng chức năng Đổi mật khẩu để đổi mật khẩu của chính bạn.");
+
+            if (!user.IsActive)
+                return (false, "Tài khoản đang bị vô hiệu hóa, không thể đặt lại mật khẩu.");
+
+            if (!canResetAdmins && user.UserRoles.Any(ur => ur.Role.RoleName == AdminRoleName))
+                return (false, "Chỉ quản trị viên mới được đặt lại mật khẩu tài khoản ADMIN.");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            user.PasswordResetOtp = null;
+            user.PasswordResetOtpExpiry = null;
+            user.ModifiedDate = DateTime.UtcNow;
+
+            // Tokens carry the LastLogin they were issued with; moving it makes every open session fail validation.
+            var now = DateTime.UtcNow;
+            user.LastLogin = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
+
+            await _userRepository.SaveChangesAsync();
+
+            await _emailService.SendAsync(
+                user.Email,
+                "Mật khẩu tài khoản HR System đã được đặt lại",
+                BuildResetPasswordEmail(user.Username));
+
+            return (true, null);
+        }
+
         private async Task<string> GenerateUniqueUsernameAsync(string firstName, string lastName, int employeeId)
         {
             var baseUsername = _validationService.GenerateBaseUsername(firstName, lastName);
@@ -245,6 +308,13 @@ namespace HRManagement.Services.Users
                 {(roleChanged ? "<li><b>Vai tro:</b> Da duoc cap nhat</li>" : "")}
             </ul>
             <p>Neu ban khong nhan ra thay doi nay, vui long lien he quan tri he thong.</p>";
+
+        // The new password is not sent: the administrator who set it hands it over
+        private static string BuildResetPasswordEmail(string username) =>
+            $@"<h3>Mật khẩu của bạn đã được đặt lại</h3>
+            <p>Quản trị viên vừa đặt lại mật khẩu tài khoản HR System <b>{username}</b> của bạn.</p>
+            <p>Mọi phiên đăng nhập cũ đã bị đăng xuất. Hãy liên hệ quản trị viên để nhận mật khẩu mới, đăng nhập và đổi lại mật khẩu của riêng bạn.</p>
+            <p>Nếu bạn không yêu cầu việc này, hãy liên hệ quản trị viên ngay.</p>";
 
         private static string BuildDeactivateEmail() =>
             $@"<h3>Thong bao trang thai tai khoan HR System</h3>

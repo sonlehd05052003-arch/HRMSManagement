@@ -18,6 +18,9 @@ public partial class Menu
 
     public bool IsActive { get; set; }
 
+    /// <summary>Shown in the SuperAdmin's sidebar (the SuperAdmin has no company roles, so it is not in RoleMenus).</summary>
+    public bool ShowForSuperAdmin { get; set; }
+
     public virtual Menu? Parent { get; set; }
 
     public virtual ICollection<Menu> Children { get; set; } = new List<Menu>();

@@ -16,6 +16,16 @@ namespace HRManagement.Authorization
         protected override async Task HandleRequirementAsync(
             AuthorizationHandlerContext context, PermissionRequirement requirement)
         {
+            // The SuperAdmin holds no company permissions, but has full access to the configuration
+            // endpoints opened to it with [SuperAdminCompanyScope]
+            if (context.User.IsInRole(PlatformRoles.SuperAdmin)
+                && context.Resource is HttpContext http
+                && http.GetEndpoint()?.Metadata.GetMetadata<SuperAdminCompanyScopeAttribute>() != null)
+            {
+                context.Succeed(requirement);
+                return;
+            }
+
             var roleNames = context.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
             if (roleNames.Count == 0)
                 return;

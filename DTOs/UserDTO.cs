@@ -27,6 +27,22 @@ namespace HRManagement.DTOs
         public List<string> Roles { get; set; } = new();
     }
 
+    /// <summary>Just enough of an employee to link an account to it (the SuperAdmin may not read full HR records).</summary>
+    public class UserEmployeeOptionDTO
+    {
+        public int EmployeeId { get; set; }
+        public string EmployeeCode { get; set; } = null!;
+        public string FullName { get; set; } = null!;
+        public string Email { get; set; } = null!;
+    }
+
+    /// <summary>New password an ADMIN / the SuperAdmin sets for another account.</summary>
+    public class ResetUserPasswordDTO
+    {
+        public string NewPassword { get; set; } = null!;
+        public string ConfirmNewPassword { get; set; } = null!;
+    }
+
     public class RoleValidationResult
     {
         public bool IsValid { get; set; }

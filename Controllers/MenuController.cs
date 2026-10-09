@@ -17,19 +17,13 @@ namespace HRManagement.Controllers
     {
         private const int MaxDepth = 3;
 
-        // Negative ids so they can never collide with stored menus
-        private static readonly List<MyMenuNodeDTO> SuperAdminMenu = new()
-        {
-            new() { MenuId = -1, Code = "platform.companies", Title = "Quản lý công ty", Route = "/superadmin/companies", IconName = "BankOutlined" },
-            new() { MenuId = -2, Code = "platform.roles", Title = "Quản lý vai trò", Route = "/admin/manage-role", IconName = "SafetyOutlined" },
-            new() { MenuId = -3, Code = "platform.permissions", Title = "Phân quyền", Route = "/admin/manage-permission", IconName = "KeyOutlined" },
-            new() { MenuId = -4, Code = "platform.menus", Title = "Quản lý menu", Route = "/admin/manage-menu", IconName = "MenuOutlined" },
-        };
-        // Screens that moved to the SuperAdmin: never shown in, or assignable to, a company role menu
+        // SuperAdmin-only screens: never shown in, or assignable to, a company role menu
         private static readonly HashSet<string> PlatformMenuCodes = new(StringComparer.OrdinalIgnoreCase)
         {
-            "system.roles", "system.permissions", "system.menus"
+            "platform.companies", "system.roles", "system.permissions", "system.menus"
         };
+        // Always kept in the SuperAdmin's sidebar so it can never hide the screen that edits it
+        private const string SuperAdminRequiredMenuCode = "system.menus";
 
         private static readonly Regex CodePattern = new("^[a-zA-Z0-9._-]+$", RegexOptions.Compiled);
 
@@ -44,21 +38,28 @@ namespace HRManagement.Controllers
         [HttpGet("my")]
         public async Task<IActionResult> GetMyMenu()
         {
-            // SuperAdmin has no company roles, so its menu is fixed rather than stored in RoleMenus
-            if (User.IsInRole(PlatformRoles.SuperAdmin))
-                return Ok(SuperAdminMenu);
-
-            var roleNames = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
-
-            var grantedMenuIds = await _context.RoleMenus
-                .Where(rm => roleNames.Contains(rm.Role.RoleName) && rm.Role.IsActive)
-                .Select(rm => rm.MenuId)
-                .Distinct()
-                .ToListAsync();
-
-            var granted = grantedMenuIds.ToHashSet();
             var menus = await _context.Menus.AsNoTracking().Where(m => m.IsActive).ToListAsync();
-            var visible = menus.Where(m => granted.Contains(m.MenuId) && !PlatformMenuCodes.Contains(m.Code)).ToList();
+            List<Menu> visible;
+
+            // SuperAdmin has no company roles, so its menus are flagged on the menu itself
+            if (User.IsInRole(PlatformRoles.SuperAdmin))
+            {
+                visible = menus.Where(m => m.ShowForSuperAdmin).ToList();
+            }
+            else
+            {
+                var roleNames = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+
+                var grantedMenuIds = await _context.RoleMenus
+                    .Where(rm => roleNames.Contains(rm.Role.RoleName) && rm.Role.IsActive)
+                    .Select(rm => rm.MenuId)
+                    .Distinct()
+                    .ToListAsync();
+
+                var granted = grantedMenuIds.ToHashSet();
+                visible = menus.Where(m => granted.Contains(m.MenuId) && !PlatformMenuCodes.Contains(m.Code)).ToList();
+            }
+
             var byParent = visible.ToLookup(m => m.ParentId);
 
             List<MyMenuNodeDTO> Build(int? parentId) => byParent[parentId]
@@ -200,7 +201,36 @@ namespace HRManagement.Controllers
             return Ok("Role menus updated");
         }
 
-        private async Task<List<MenuAdminNodeDTO>> BuildAdminTreeAsync(int? grantedForRoleId)
+        /// <summary>Full tree with IsGranted flagged for the SuperAdmin's own sidebar.</summary>
+        [HttpGet("superadmin")]
+        [Authorize(Roles = PlatformRoles.SuperAdmin)]
+        public async Task<IActionResult> GetSuperAdminMenus()
+        {
+            return Ok(await BuildAdminTreeAsync(null, grantedForSuperAdmin: true));
+        }
+
+        /// <summary>Replaces the set of menu nodes shown in the SuperAdmin's sidebar.</summary>
+        [HttpPut("superadmin")]
+        [Authorize(Roles = PlatformRoles.SuperAdmin)]
+        public async Task<IActionResult> UpdateSuperAdminMenus([FromBody] UpdateRoleMenusDTO dto)
+        {
+            var menus = await _context.Menus.ToListAsync();
+            var byId = menus.ToDictionary(m => m.MenuId);
+            var wanted = dto.MenuIds.Where(byId.ContainsKey).ToHashSet();
+
+            // Keep the menu screen and its ancestors, or the SuperAdmin could lock itself out of this page
+            var required = menus.FirstOrDefault(m => m.Code == SuperAdminRequiredMenuCode);
+            for (var cursor = required; cursor != null; cursor = cursor.ParentId is int p ? byId[p] : null)
+                wanted.Add(cursor.MenuId);
+
+            foreach (var menu in menus)
+                menu.ShowForSuperAdmin = wanted.Contains(menu.MenuId);
+
+            await _context.SaveChangesAsync();
+            return Ok("SuperAdmin menus updated");
+        }
+
+        private async Task<List<MenuAdminNodeDTO>> BuildAdminTreeAsync(int? grantedForRoleId, bool grantedForSuperAdmin = false)
         {
             var menus = await _context.Menus.AsNoTracking().ToListAsync();
             // The per-role tree only offers menus a company role may actually get
@@ -215,7 +245,10 @@ namespace HRManagement.Controllers
                 .Select(m =>
                 {
                     var roleIds = rolesByMenu[m.MenuId].ToList();
-                    var node = ToAdminNode(m, roleIds, grantedForRoleId.HasValue ? roleIds.Contains(grantedForRoleId.Value) : null);
+                    bool? isGranted = grantedForSuperAdmin ? m.ShowForSuperAdmin
+                        : grantedForRoleId.HasValue ? roleIds.Contains(grantedForRoleId.Value)
+                        : null;
+                    var node = ToAdminNode(m, roleIds, isGranted);
                     node.Children = Build(m.MenuId);
                     return node;
                 })
