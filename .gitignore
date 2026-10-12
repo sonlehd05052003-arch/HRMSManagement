@@ -31,3 +31,4 @@ wwwroot/lib/
 wwwroot/uploads/
 *.md
 *.txt
+build_log.txt
