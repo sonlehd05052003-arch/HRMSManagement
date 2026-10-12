@@ -58,65 +58,9 @@ builder.Services.AddHttpClient();
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
 builder.Services.AddAutoMapper(typeof(TaskProfile).Assembly);
 
-// Repositories
-builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
-builder.Services.AddScoped<IEmployeeDocumentRepository, EmployeeDocumentRepository>();
-builder.Services.AddScoped<IHRProcedureRepository, HRProcedureRepository>();
-builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
-builder.Services.AddScoped<IPositionRepository, PositionRepository>();
-builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
-builder.Services.AddScoped<IShiftRepository, ShiftRepository>();
-builder.Services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository>();
-
-// User, Auth & Task Repositories
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IAuthRepository, AuthRepository>();
-builder.Services.AddScoped<ITaskRepository, TaskRepository>();
-
-// Payroll Repositories
-builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
-builder.Services.AddScoped<IPayrollPeriodRepository, PayrollPeriodRepository>();
-
-// Core Services
-builder.Services.AddScoped<ITenantContext, TenantContext>();
-builder.Services.AddScoped<ICompanyService, CompanyService>();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<IEmployeeService, EmployeeService>();
-builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
-builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
-// Email: services enqueue through QueuedEmailService; Hangfire runs EmailService (SMTP) in the background
-builder.Services.AddScoped<EmailService>();
-builder.Services.AddScoped<IEmailService, QueuedEmailService>();
-builder.Services.AddScoped<IHRProcedureService, HRProcedureService>();
-builder.Services.AddScoped<IDepartmentService, DepartmentService>();
-builder.Services.AddScoped<IPositionService, PositionService>();
-builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
-builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
-builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
-builder.Services.AddScoped<IAttendanceService, AttendanceService>();
-builder.Services.AddScoped<IFaceVerificationService, FaceVerificationService>();
-builder.Services.AddScoped<IFileStorageService, FileStorageService>();
-builder.Services.AddScoped<IShiftService, ShiftService>();
-builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
-builder.Services.AddScoped<IOvertimeRequestService, OvertimeRequestService>();
-builder.Services.AddScoped<IUserAccountValidationService, UserAccountValidationService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ITaskService, TaskService>();
-builder.Services.AddScoped<ITopLevelResolver, TopLevelResolver>();
-builder.Services.AddScoped<IApprovalRouteService, ApprovalRouteService>();
-builder.Services.AddScoped<FaceEmbeddingService>();
-
-// Specialized Services
-builder.Services.AddScoped<IAuditService, AuditService>();
-builder.Services.AddScoped<IExportService, ExportService>();
-
-// Resignation Request
-builder.Services.AddScoped<IResignationRequestService, ResignationRequestService>();
-
-// Payroll Services
-builder.Services.AddScoped<TaxCalculationService>();
-builder.Services.AddScoped<IPayrollService, PayrollService>();
+// Repositories and application services (see Configuration/ServiceRegistration.cs)
+builder.Services.AddRepositories();
+builder.Services.AddApplicationServices();
 
 // Background jobs (Hangfire, stored in the same SQL Server database under the HangFire schema)
 builder.Services.AddHangfire(config => config
