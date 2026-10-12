@@ -247,6 +247,10 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.AddSingleton<IPermissionCache, PermissionCache>();
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
+// Per-IP limits on login and password reset (see RateLimitPolicies); the cache counts wrong OTP attempts
+builder.Services.AddAuthRateLimits();
+builder.Services.AddMemoryCache();
+
 // Exceptions that escape a controller become a JSON { message } response (see GlobalExceptionHandler)
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -276,6 +280,7 @@ app.UseRouting();
 
 // Middleware Pipeline
 app.UseCors("AllowAll");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

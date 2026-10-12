@@ -4,9 +4,11 @@ using HRManagement.DTOs;
 using HRManagement.DTOs.Auths;
 using HRManagement.Services.Emails;
 using HRManagement.Services.Tenants;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace HRManagement.Services.Users
@@ -16,15 +18,18 @@ namespace HRManagement.Services.Users
         private readonly IAuthRepository _authRepository;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly IMemoryCache _cache;
 
         public AuthService(
             IAuthRepository authRepository,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IMemoryCache cache)
         {
             _authRepository = authRepository;
             _emailService = emailService;
             _configuration = configuration;
+            _cache = cache;
         }
 
         public async Task<(bool Success, string? Error, string? Token)> LoginAsync(LoginRequestDTO dto)
@@ -127,6 +132,7 @@ namespace HRManagement.Services.Users
             user.PasswordResetOtp = otp;
             user.PasswordResetOtpExpiry = DateTime.UtcNow.AddMinutes(5);
             await _authRepository.SaveChangesAsync();
+            _cache.Remove(OtpAttemptsKey(user.UserId));
 
             await _emailService.SendAsync(
                 user.Email,
@@ -167,11 +173,26 @@ namespace HRManagement.Services.Users
             if (string.IsNullOrWhiteSpace(user.PasswordResetOtp) || user.PasswordResetOtpExpiry is null)
                 return (false, "OTP không hợp lệ hoặc chưa được tạo.");
 
-            if (user.PasswordResetOtp != dto.Otp.Trim())
-                return (false, "OTP không đúng.");
-
             if (user.PasswordResetOtpExpiry < DateTime.UtcNow)
                 return (false, "OTP đã hết hạn.");
+
+            if (!OtpMatches(user.PasswordResetOtp, dto.Otp.Trim()))
+            {
+                // A 6-digit code falls to guessing without a cap, even with the per-IP rate limit
+                var attemptsKey = OtpAttemptsKey(user.UserId);
+                var attempts = (_cache.Get<int?>(attemptsKey) ?? 0) + 1;
+                if (attempts >= MaxOtpAttempts)
+                {
+                    user.PasswordResetOtp = null;
+                    user.PasswordResetOtpExpiry = null;
+                    await _authRepository.SaveChangesAsync();
+                    _cache.Remove(attemptsKey);
+                    return (false, "Bạn đã nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã OTP mới.");
+                }
+
+                _cache.Set(attemptsKey, attempts, DateTime.SpecifyKind(user.PasswordResetOtpExpiry.Value, DateTimeKind.Utc));
+                return (false, "OTP không đúng.");
+            }
 
             if (BCrypt.Net.BCrypt.Verify(dto.NewPassword, user.PasswordHash))
                 return (false, "Mật khẩu mới không được trùng với mật khẩu hiện tại.");
@@ -180,6 +201,7 @@ namespace HRManagement.Services.Users
             user.PasswordResetOtp = null;
             user.PasswordResetOtpExpiry = null;
             await _authRepository.SaveChangesAsync();
+            _cache.Remove(OtpAttemptsKey(user.UserId));
 
             return (true, null);
         }
@@ -201,7 +223,14 @@ namespace HRManagement.Services.Users
             return handler.WriteToken(handler.CreateToken(tokenDescriptor));
         }
 
-        private static string GenerateOtp() => new Random().Next(100000, 999999).ToString();
+        private const int MaxOtpAttempts = 5;
+
+        private static string OtpAttemptsKey(int userId) => $"otp-attempts:{userId}";
+
+        private static string GenerateOtp() => RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+
+        private static bool OtpMatches(string expected, string actual) =>
+            CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(actual));
 
         private static string BuildOtpEmail(string username, string otp) =>
             $@"<h3>Đặt lại mật khẩu HR System</h3>

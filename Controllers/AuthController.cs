@@ -4,6 +4,7 @@ using HRManagement.DTOs.Auths;
 using HRManagement.Services.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Task = System.Threading.Tasks.Task;
@@ -22,6 +23,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting(RateLimitPolicies.Login)]
         public async Task<IActionResult> Login(LoginRequestDTO request)
         {
             var (success, error, token) = await _authService.LoginAsync(request);
@@ -87,6 +89,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPost("forgot-password")]
+        [EnableRateLimiting(RateLimitPolicies.PasswordReset)]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO dto)
         {
             if (dto is null)
@@ -100,6 +103,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPost("reset-password")]
+        [EnableRateLimiting(RateLimitPolicies.PasswordReset)]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO dto)
         {
             if (dto is null)
