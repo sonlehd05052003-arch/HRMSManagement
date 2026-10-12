@@ -36,14 +36,19 @@ namespace HRManagement.Services.Users
         {
             var user = await _authRepository.GetUserForLoginAsync(dto.Username);
 
+            // Same message and roughly the same time whether or not the username exists, so the login form
+            // cannot be used to find out which accounts exist
             if (user is null)
-                return (false, "Username không tồn tại", null);
+            {
+                BCrypt.Net.BCrypt.Verify(dto.Password, DummyPasswordHash.Value);
+                return (false, InvalidCredentialsMessage, null);
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+                return (false, InvalidCredentialsMessage, null);
 
             if (!user.IsActive)
                 return (false, "Tài khoản đã bị vô hiệu hóa", null);
-
-            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-                return (false, "Mật khẩu không đúng", null);
 
             if (user.Company is { IsActive: false })
                 return (false, "Công ty của bạn đã bị tạm khóa trên hệ thống", null);
@@ -122,11 +127,10 @@ namespace HRManagement.Services.Users
 
             var user = await _authRepository.GetUserByEmailOrUsernameAsync(dto.EmailOrUsername);
 
-            if (user is null)
-                return (false, "Email hoặc Username không tồn tại trong hệ thống.");
-
-            if (!user.IsActive)
-                return (false, "Tài khoản của bạn hiện đang bị vô hiệu hóa.");
+            // Answer the same way for unknown or disabled accounts: the caller only learns that an email went out
+            // if the account exists
+            if (user is null || !user.IsActive)
+                return (true, null);
 
             var otp = GenerateOtp();
             user.PasswordResetOtp = otp;
@@ -163,18 +167,14 @@ namespace HRManagement.Services.Users
             if (dto.NewPassword.Length < 6)
                 return (false, "Mật khẩu mới phải có ít nhất 6 ký tự.");
 
+            // Every account or OTP problem gets the same answer, so this form cannot reveal which accounts exist
             var user = await _authRepository.GetUserByEmailOrUsernameAsync(dto.EmailOrUsername);
-            if (user is null)
-                return (false, "Thông tin đặt lại mật khẩu không hợp lệ.");
-
-            if (!user.IsActive)
-                return (false, "Tài khoản đã bị vô hiệu hóa.");
-
-            if (string.IsNullOrWhiteSpace(user.PasswordResetOtp) || user.PasswordResetOtpExpiry is null)
-                return (false, "OTP không hợp lệ hoặc chưa được tạo.");
-
-            if (user.PasswordResetOtpExpiry < DateTime.UtcNow)
-                return (false, "OTP đã hết hạn.");
+            if (user is null
+                || !user.IsActive
+                || string.IsNullOrWhiteSpace(user.PasswordResetOtp)
+                || user.PasswordResetOtpExpiry is null
+                || user.PasswordResetOtpExpiry < DateTime.UtcNow)
+                return (false, InvalidOtpMessage);
 
             if (!OtpMatches(user.PasswordResetOtp, dto.Otp.Trim()))
             {
@@ -187,11 +187,11 @@ namespace HRManagement.Services.Users
                     user.PasswordResetOtpExpiry = null;
                     await _authRepository.SaveChangesAsync();
                     _cache.Remove(attemptsKey);
-                    return (false, "Bạn đã nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã OTP mới.");
+                    return (false, InvalidOtpMessage);
                 }
 
                 _cache.Set(attemptsKey, attempts, DateTime.SpecifyKind(user.PasswordResetOtpExpiry.Value, DateTimeKind.Utc));
-                return (false, "OTP không đúng.");
+                return (false, InvalidOtpMessage);
             }
 
             if (BCrypt.Net.BCrypt.Verify(dto.NewPassword, user.PasswordHash))
@@ -222,6 +222,12 @@ namespace HRManagement.Services.Users
             var handler = new JwtSecurityTokenHandler();
             return handler.WriteToken(handler.CreateToken(tokenDescriptor));
         }
+
+        private const string InvalidCredentialsMessage = "Tên đăng nhập hoặc mật khẩu không đúng";
+        private const string InvalidOtpMessage = "Mã OTP không đúng hoặc đã hết hạn. Vui lòng kiểm tra lại hoặc yêu cầu mã mới.";
+
+        // Checked against when the username does not exist, so that path costs as much as a wrong password
+        private static readonly Lazy<string> DummyPasswordHash = new(() => BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()));
 
         private const int MaxOtpAttempts = 5;
 
