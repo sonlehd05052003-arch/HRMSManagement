@@ -130,7 +130,7 @@ namespace HRManagement.Services.Leaves
             }
 
             // Validate year
-            if (dto.Year < 2000 || dto.Year > DateTime.Now.Year + 5)
+            if (dto.Year < 2000 || dto.Year > AppTime.Now.Year + 5)
             {
                 return ServiceResult<string>.Fail("MSG-04", "Invalid year.");
             }
@@ -168,7 +168,7 @@ namespace HRManagement.Services.Leaves
                 UsedDays = dto.UsedDays,
                 CarriedForward = dto.CarriedForward,
                 RemainingDays = remainingDays,
-                LastUpdated = DateTime.Now
+                LastUpdated = AppTime.Now
             };
 
             _context.LeaveBalances.Add(newBalance);
@@ -188,7 +188,7 @@ namespace HRManagement.Services.Leaves
                 .FirstOrDefaultAsync(x =>
                     x.EmployeeId == dto.EmployeeId &&
                     x.LeaveTypeId == dto.LeaveTypeId &&
-                    x.Year == DateTime.Now.Year);
+                    x.Year == AppTime.Now.Year);
 
             if (balance == null)
             {
@@ -226,7 +226,7 @@ namespace HRManagement.Services.Leaves
                 return ServiceResult<string>.Fail("MSG-49", "Invalid adjustment type. Use 'Add' or 'Deduct'.");
             }
 
-            balance.LastUpdated = DateTime.Now;
+            balance.LastUpdated = AppTime.Now;
 
 
             await _context.SaveChangesAsync();
@@ -236,7 +236,7 @@ namespace HRManagement.Services.Leaves
 
         public async Task<ServiceResult<GenerateBalanceResultDTO>> GenerateBalancesForYearAsync(int hrUserId, int year, bool carryForward)
         {
-            if (year < 2000 || year > DateTime.Now.Year + 5)
+            if (year < 2000 || year > AppTime.Now.Year + 5)
                 return ServiceResult<GenerateBalanceResultDTO>.Fail("MSG-04", "Invalid year.");
 
             var activeEmployees = await _context.Employees
@@ -300,7 +300,7 @@ namespace HRManagement.Services.Leaves
                         UsedDays = 0,
                         CarriedForward = carried,
                         RemainingDays = totalEntitlement,
-                        LastUpdated = DateTime.Now
+                        LastUpdated = AppTime.Now
                     };
 
                     _context.LeaveBalances.Add(newBalance);

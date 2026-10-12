@@ -24,7 +24,7 @@ namespace HRManagement.Controllers
         [RequirePermission("Dashboard.Admin")]
         public async Task<IActionResult> GetAdminStats([FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate)
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateOnly.FromDateTime(AppTime.Today);
             var start = fromDate ?? today.AddDays(-30);
             var end = toDate ?? today;
 
@@ -60,7 +60,7 @@ namespace HRManagement.Controllers
                 .SumAsync(o => o.TotalHours);
 
             // 5. System Stats (Real-ish)
-            var uptime = DateTime.Now - Process.GetCurrentProcess().StartTime;
+            var uptime = AppTime.Now - Process.GetCurrentProcess().StartTime;
             stats.SystemUptime = $"{(int)uptime.TotalDays}d {uptime.Hours}h {uptime.Minutes}m";
             
             // Database Size (Mocked for now or query sys tables if possible)
@@ -108,7 +108,7 @@ namespace HRManagement.Controllers
         [RequirePermission("Dashboard.Hr")]
         public async Task<IActionResult> GetHrStats([FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate)
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateOnly.FromDateTime(AppTime.Today);
             var start = fromDate ?? today.AddDays(-30);
             var end = toDate ?? today;
 
@@ -206,7 +206,7 @@ namespace HRManagement.Controllers
             if (user?.EmployeeId == null) return NotFound("Chỉ người dùng là quản lý trực tiếp nhân viên mới có dữ liệu đội nhóm.");
 
             var managerEmployeeId = user.EmployeeId.Value;
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateOnly.FromDateTime(AppTime.Today);
             var start = fromDate ?? today.AddDays(-30);
             var end = toDate ?? today;
 

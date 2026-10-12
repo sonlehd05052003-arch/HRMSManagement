@@ -20,7 +20,7 @@ public partial class PayrollFeedback
 
     public bool IsAgreed { get; set; } = false;
 
-    public DateTime SubmittedAt { get; set; } = DateTime.Now;
+    public DateTime SubmittedAt { get; set; } = AppTime.Now;
 
     // "Pending" | "Resolved" | "Dismissed"
     [MaxLength(20)]

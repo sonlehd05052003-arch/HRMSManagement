@@ -79,7 +79,7 @@ namespace HRManagement.Services.Attendances
             attendance.ExplanationLeaveTypeId = null;
             attendance.ExplanationRequestedCheckInTime = null;
             attendance.ExplanationRequestedCheckOutTime = null;
-            attendance.ModifiedDate = DateTime.Now;
+            attendance.ModifiedDate = AppTime.Now;
             attendance.ModifiedBy = employeeId;
 
             if (string.Equals(normalizedType, "LeaveRequest", StringComparison.OrdinalIgnoreCase))
@@ -272,7 +272,7 @@ namespace HRManagement.Services.Attendances
 
                 leaveBalance.UsedDays += 1;
                 leaveBalance.RemainingDays = (leaveBalance.TotalEntitlement + leaveBalance.CarriedForward) - leaveBalance.UsedDays;
-                leaveBalance.LastUpdated = DateTime.Now;
+                leaveBalance.LastUpdated = AppTime.Now;
             }
 
             var leaveRequest = new LeaveRequest
@@ -285,11 +285,11 @@ namespace HRManagement.Services.Attendances
                 NumberOfDays = 1,
                 Reason = attendance.ExplanationMessage,
                 Status = "Approved",
-                SubmittedDate = DateTime.Now,
-                ReviewedDate = DateTime.Now,
+                SubmittedDate = AppTime.Now,
+                ReviewedDate = AppTime.Now,
                 ReviewedBy = managerId,
                 ReviewerComments = managerComment,
-                ApprovedDate = DateTime.Now,
+                ApprovedDate = AppTime.Now,
                 ApprovedBy = managerId,
                 TargetApproverId = managerId
             };
@@ -305,7 +305,7 @@ namespace HRManagement.Services.Attendances
 
         public static async Task<string> GenerateLeaveRequestNumberAsync(HrmsDbContext context)
         {
-            var today = DateTime.Now;
+            var today = AppTime.Now;
             var prefix = $"LR-EXP-{today:yyyyMMdd}";
             var countToday = await context.LeaveRequests.CountAsync(x => x.SubmittedDate.Date == today.Date);
             return $"{prefix}-{countToday + 1:D3}";

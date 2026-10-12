@@ -158,7 +158,7 @@ namespace HRManagement.Controllers
                 return Unauthorized(new { MessageCode = "MSG-106", Message = "Access Denied." });
             }
 
-            int targetYear = year ?? DateTime.Now.Year;
+            int targetYear = year ?? AppTime.Now.Year;
 
             var result = await _leaveBalanceService.GenerateBalancesForYearAsync(userId, targetYear, carryForward);
 

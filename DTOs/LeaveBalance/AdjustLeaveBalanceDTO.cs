@@ -20,6 +20,6 @@ namespace HRManagement.DTOs.LeaveBalance
         [Required]
         public string Reason { get; set; } = string.Empty;
 
-        public DateTime EffectiveDate { get; set; } = DateTime.Now;
+        public DateTime EffectiveDate { get; set; } = AppTime.Now;
     }
 }

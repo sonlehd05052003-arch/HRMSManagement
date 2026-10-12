@@ -34,7 +34,7 @@ namespace HRManagement.Services.Shifts
                 LatestCheckOutMinutes = dto.LatestCheckOutMinutes,
                 IsOvernight = dto.IsOvernight,
                 IsActive = true,
-                CreatedDate = DateTime.Now,
+                CreatedDate = AppTime.Now,
                 CreatedBy = currentUserId
             };
 

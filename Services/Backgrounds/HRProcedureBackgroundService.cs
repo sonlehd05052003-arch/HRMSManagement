@@ -53,7 +53,7 @@ namespace HRManagement.Services.Backgrounds
             var context = services.GetRequiredService<HrmsDbContext>();
             var procedureService = services.GetRequiredService<IHRProcedureService>();
 
-            var today = DateTime.Today;
+            var today = AppTime.Today;
 
             // Lấy các procedure đã Approved, chưa Applied, và có EffectiveDate <= today
             var pendingApplyIds = await context.Hrprocedures

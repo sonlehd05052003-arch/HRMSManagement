@@ -14,7 +14,7 @@ namespace HRManagement.DataAcess.Implementations
 
         public async Task<Employee> AddEmployeeAsync(Employee employee)
         {
-            employee.CreatedDate = DateTime.Now;
+            employee.CreatedDate = AppTime.Now;
             await _context.Employees.AddAsync(employee);
             await _context.SaveChangesAsync();
             return employee;
@@ -33,7 +33,7 @@ namespace HRManagement.DataAcess.Implementations
 
         public async Task<IEnumerable<Employee>> GetActiveEmployeesAsync()
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var today = DateOnly.FromDateTime(AppTime.Today);
             return await _context.Employees
                  .Where(e => e.EmploymentStatus == "Active" && e.JoinDate <= today)
                  .Include(d => d.Department)
@@ -56,7 +56,7 @@ namespace HRManagement.DataAcess.Implementations
 
         public async Task<Employee> UpdateEmployeeAsync(Employee employee)
         {
-            employee.ModifiedDate = DateTime.Now;
+            employee.ModifiedDate = AppTime.Now;
             _context.Employees.Update(employee); 
             await _context.SaveChangesAsync(); 
             return employee;

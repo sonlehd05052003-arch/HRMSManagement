@@ -61,7 +61,7 @@ namespace HRManagement.Controllers
                 if (ex.Message.Contains("đã check-in hôm nay rồi"))
                 {
                     var employeeId = await _currentUserService.GetCurrentEmployeeIdAsync();
-                    var today = DateOnly.FromDateTime(DateTime.Now);
+                    var today = DateOnly.FromDateTime(AppTime.Now);
                     var attendance = await _context.AttendanceRecords
                         .FirstOrDefaultAsync(x => x.EmployeeId == employeeId && x.AttendanceDate == today);
                     

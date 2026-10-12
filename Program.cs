@@ -1,4 +1,5 @@
 using Hangfire;
+using HRManagement;
 using HRManagement.Authorization;
 using HRManagement.Configuration;
 using HRManagement.DataAcess;
@@ -39,6 +40,9 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Business time zone for AppTime.Now (defaults to Asia/Ho_Chi_Minh); never the server's own zone
+AppTime.Configure(builder.Configuration["App:TimeZone"]);
 
 // Database Configuration
 builder.Services.AddDbContext<HrmsDbContext>(options =>
@@ -296,7 +300,7 @@ if (app.Environment.IsDevelopment())
 await SuperAdminSeeder.EnsureAsync(app.Services, app.Configuration, app.Logger);
 
 var recurringJobs = app.Services.GetRequiredService<IRecurringJobManager>();
-var jobOptions = new RecurringJobOptions { TimeZone = TimeZoneInfo.Local };
+var jobOptions = new RecurringJobOptions { TimeZone = AppTime.TimeZone };
 recurringJobs.AddOrUpdate<HRProcedureBackgroundService>(
     HRProcedureBackgroundService.JobId, job => job.ApplyPendingProceduresAsync(), "*/5 * * * *", jobOptions);
 recurringJobs.AddOrUpdate<PayrollAttendanceReviewService>(

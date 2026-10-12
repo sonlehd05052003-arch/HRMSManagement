@@ -68,7 +68,7 @@ namespace HRManagement.Services.Exports
                     };
             }
 
-            var fileName = $"{request.Module}_export_{DateTime.Now:yyyyMMddHHmmss}.{extension}";
+            var fileName = $"{request.Module}_export_{AppTime.Now:yyyyMMddHHmmss}.{extension}";
 
             // Save audit log
             await _auditService.TrackAsync(userId, "SELECT", $"Export {request.Module}");

@@ -53,7 +53,7 @@ namespace HRManagement.Services.Backgrounds
             var context = services.GetRequiredService<HrmsDbContext>();
             var payrollService = services.GetRequiredService<IPayrollService>();
 
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateOnly.FromDateTime(AppTime.Today);
 
             // Tìm các kỳ lương Open có AttendanceCutoffDate = hôm nay
             var duePeriodIds = await context.PayrollPeriods

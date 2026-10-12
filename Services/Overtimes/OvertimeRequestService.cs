@@ -25,7 +25,7 @@ namespace HRManagement.Services.Overtimes
 
         public async Task<ServiceResult<string>> CreateOvertimeRequestAsync(int userId, CreateOvertimeRequestDTO dto)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = DateOnly.FromDateTime(AppTime.Now);
 
             // 1. Validate date range: -3 to +30 days
             if (dto.OvertimeDate < today.AddDays(-3))
@@ -193,7 +193,7 @@ namespace HRManagement.Services.Overtimes
             var approverId = await _approvalRouteService.GetApproverIdAsync(employee.EmployeeId);
             string initialStatus = approverId.HasValue ? "Pending" : "Approved";
 
-            string requestNumber = $"OT-{DateTime.Now:yyyyMMddHHmmss}";
+            string requestNumber = $"OT-{AppTime.Now:yyyyMMddHHmmss}";
 
             var overtimeRequest = new OvertimeRequest
             {
@@ -207,10 +207,10 @@ namespace HRManagement.Services.Overtimes
                 TaskDescription = dto.TaskDescription,
                 Status = initialStatus,
                 TargetApproverId = approverId,
-                SubmittedDate = DateTime.Now,
-                ReviewedDate = initialStatus == "Approved" ? DateTime.Now : null,
+                SubmittedDate = AppTime.Now,
+                ReviewedDate = initialStatus == "Approved" ? AppTime.Now : null,
                 ReviewedBy = null,
-                ApprovedDate = initialStatus == "Approved" ? DateTime.Now : null,
+                ApprovedDate = initialStatus == "Approved" ? AppTime.Now : null,
                 ApprovedBy = null // System
             };
 
@@ -227,7 +227,7 @@ namespace HRManagement.Services.Overtimes
                     RelatedEntity = "OvertimeRequest",
                     RelatedEntityId = overtimeRequest.OvertimeRequestId,
                     IsRead = false,
-                    SentDate = DateTime.Now
+                    SentDate = AppTime.Now
                 };
                 _context.Notifications.Add(notification);
             }
@@ -248,7 +248,7 @@ namespace HRManagement.Services.Overtimes
                     overtimeRequest.TotalHours,
                     overtimeRequest.Status
                 }),
-                ActionDate = DateTime.Now
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(auditLog);
@@ -279,9 +279,9 @@ namespace HRManagement.Services.Overtimes
             }
 
             request.Status = "Approved";
-            request.ReviewedDate = DateTime.Now;
+            request.ReviewedDate = AppTime.Now;
             request.ReviewedBy = managerUserId;
-            request.ApprovedDate = DateTime.Now;
+            request.ApprovedDate = AppTime.Now;
             request.ApprovedBy = managerUserId;
 
             // Notification for employee
@@ -297,7 +297,7 @@ namespace HRManagement.Services.Overtimes
                     RelatedEntity = "OvertimeRequest",
                     RelatedEntityId = request.OvertimeRequestId,
                     IsRead = false,
-                    SentDate = DateTime.Now
+                    SentDate = AppTime.Now
                 };
                 _context.Notifications.Add(notification);
             }
@@ -314,7 +314,7 @@ namespace HRManagement.Services.Overtimes
                     request.ApprovedBy,
                     request.ApprovedDate
                 }),
-                ActionDate = DateTime.Now
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(auditLog);
@@ -345,7 +345,7 @@ namespace HRManagement.Services.Overtimes
             }
 
             request.Status = "Rejected";
-            request.ReviewedDate = DateTime.Now;
+            request.ReviewedDate = AppTime.Now;
             request.ReviewedBy = managerUserId;
             request.RejectionReason = dto.Reason;
 
@@ -362,7 +362,7 @@ namespace HRManagement.Services.Overtimes
                     RelatedEntity = "OvertimeRequest",
                     RelatedEntityId = request.OvertimeRequestId,
                     IsRead = false,
-                    SentDate = DateTime.Now
+                    SentDate = AppTime.Now
                 };
                 _context.Notifications.Add(notification);
             }
@@ -378,7 +378,7 @@ namespace HRManagement.Services.Overtimes
                     request.Status,
                     request.RejectionReason
                 }),
-                ActionDate = DateTime.Now
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(auditLog);
@@ -422,7 +422,7 @@ namespace HRManagement.Services.Overtimes
                     request.Status,
                     request.RejectionReason
                 }),
-                ActionDate = DateTime.Now
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(auditLog);

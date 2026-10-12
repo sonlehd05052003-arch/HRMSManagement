@@ -35,7 +35,7 @@ namespace HRManagement.Services.Resignations
             if (noticeSetting != null && int.TryParse(noticeSetting.SettingValue, out var parsedDays))
                 noticeDays = parsedDays;
 
-            var minDate = DateOnly.FromDateTime(DateTime.Today.AddDays(noticeDays));
+            var minDate = DateOnly.FromDateTime(AppTime.Today.AddDays(noticeDays));
             if (dto.ExpectedLastWorkingDate < minDate)
                 return ServiceResult<ResignationRequestResponseDto>.Fail("RR-02",
                     $"Ngày làm việc cuối phải cách ngày nộp đơn ít nhất {noticeDays} ngày (tối thiểu {minDate:dd/MM/yyyy}).");
@@ -71,7 +71,7 @@ namespace HRManagement.Services.Resignations
                     && t.Status != "Cancelled");
 
             // Generate request number
-            var today = DateTime.Today;
+            var today = AppTime.Today;
             var prefix = $"RR-{today:yyyyMMdd}-";
             var countToday = await _context.ResignationRequests
                 .CountAsync(r => r.RequestNumber.StartsWith(prefix));
@@ -86,7 +86,7 @@ namespace HRManagement.Services.Resignations
                 HandoverNote = dto.HandoverNote,
                 HandoverToEmployeeId = dto.HandoverToEmployeeId,
                 Status = "Pending",
-                SubmittedDate = DateTime.Now,
+                SubmittedDate = AppTime.Now,
                 TargetApproverId = approverId
             };
 
@@ -197,7 +197,7 @@ namespace HRManagement.Services.Resignations
                 return ServiceResult<string>.Fail("RR-07", "Đơn này không còn ở trạng thái chờ duyệt.");
 
             request.Status = "Approved";
-            request.ReviewedDate = DateTime.Now;
+            request.ReviewedDate = AppTime.Now;
             request.ReviewedBy = userId;
             request.ReviewerComments = dto.Comments;
 
@@ -221,7 +221,7 @@ namespace HRManagement.Services.Resignations
                 return ServiceResult<string>.Fail("RR-07", "Đơn này không còn ở trạng thái chờ duyệt.");
 
             request.Status = "Rejected";
-            request.ReviewedDate = DateTime.Now;
+            request.ReviewedDate = AppTime.Now;
             request.ReviewedBy = userId;
             request.RejectionReason = dto.RejectionReason;
 

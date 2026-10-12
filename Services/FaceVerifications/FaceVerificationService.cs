@@ -55,7 +55,7 @@ namespace HRManagement.Services.FaceVerifications
                     ReferenceImagePath = imagePath,
                     FaceEmbedding = embeddingString,
                     Status = "Active",
-                    CreatedDate = DateTime.Now,
+                    CreatedDate = AppTime.Now,
                     CreatedBy = employeeId
                 };
 
@@ -66,7 +66,7 @@ namespace HRManagement.Services.FaceVerifications
                 existing.ReferenceImagePath = imagePath;
                 existing.FaceEmbedding = embeddingString;
                 existing.Status = "Active";
-                existing.ModifiedDate = DateTime.Now;
+                existing.ModifiedDate = AppTime.Now;
                 existing.ModifiedBy = employeeId;
 
                 await _attendanceRepository.UpdateFaceProfileAsync(existing);
@@ -106,7 +106,7 @@ namespace HRManagement.Services.FaceVerifications
                 throw new KeyNotFoundException("Nhân viên chưa có hồ sơ khuôn mặt.");
 
             existing.Status = "Inactive";
-            existing.ModifiedDate = DateTime.Now;
+            existing.ModifiedDate = AppTime.Now;
 
             await _attendanceRepository.UpdateFaceProfileAsync(existing);
             await _attendanceRepository.SaveChangesAsync();
@@ -243,7 +243,7 @@ namespace HRManagement.Services.FaceVerifications
                 IsMatch = result.IsMatch,
                 LivenessPassed = result.LivenessPassed,
                 FailureReason = result.FailureReason,
-                VerifiedAt = DateTime.Now,
+                VerifiedAt = AppTime.Now,
                 DeviceInfo = deviceInfo,
                 IpAddress = ipAddress,
                 Location = location,

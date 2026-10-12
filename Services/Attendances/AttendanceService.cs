@@ -24,7 +24,7 @@ namespace HRManagement.Services.Attendances
         }
         public async Task<AttendanceResponseDto> CheckInAsync(int employeeId, CheckInRequestDto dto)
         {
-            var now = DateTime.Now;
+            var now = AppTime.Now;
             var today = DateOnly.FromDateTime(now);
 
             var assignment = await _attendanceRepository.GetActiveShiftAssignmentAsync(employeeId, today);
@@ -175,7 +175,7 @@ namespace HRManagement.Services.Attendances
 
         public async Task<AttendanceResponseDto> CheckOutAsync(int employeeId, CheckOutRequestDto dto)
         {
-            var now = DateTime.Now;
+            var now = AppTime.Now;
 
             // Láº¥y báº£n ghi cháº¥m cÃ´ng gáº§n nháº¥t (cÃ³ thá»ƒ Ä‘Ã£ checkout rá»“i - cho phÃ©p checkout láº¡i)
             var attendance = await _attendanceRepository.GetLatestAttendanceRecordAsync(employeeId);
@@ -273,7 +273,7 @@ namespace HRManagement.Services.Attendances
 
         public async Task<AttendanceDetailResponseDto?> GetMyTodayAsync(int employeeId)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = DateOnly.FromDateTime(AppTime.Now);
             var attendance = await _attendanceRepository.GetAttendanceByEmployeeAndDateAsync(employeeId, today);
 
             if (attendance == null)
@@ -305,8 +305,8 @@ namespace HRManagement.Services.Attendances
 
         private async Task<List<AttendanceResponseDto>> SearchAttendanceWithLeavesAsync(DateOnly? fromDate, DateOnly? toDate, int? employeeId, string? status)
         {
-            var finalFrom = fromDate ?? DateOnly.FromDateTime(DateTime.Now).AddDays(-30);
-            var finalTo = toDate ?? DateOnly.FromDateTime(DateTime.Now);
+            var finalFrom = fromDate ?? DateOnly.FromDateTime(AppTime.Now).AddDays(-30);
+            var finalTo = toDate ?? DateOnly.FromDateTime(AppTime.Now);
 
             var records = await _attendanceRepository.SearchAttendanceAsync(fromDate, toDate, employeeId, status);
             
@@ -388,7 +388,7 @@ namespace HRManagement.Services.Attendances
             // 2. Generate virtual "Absent" records
             if (status == null || status == "Absent")
             {
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(AppTime.Now);
                 
                 // Tránh N+1 bằng cách cache tên nhân viên
                 var employeeNames = leaves.Select(l => new { l.EmployeeId, FullName = l.Employee?.FullName ?? "Unknown" })
@@ -515,8 +515,8 @@ namespace HRManagement.Services.Attendances
             attendance.Source = dto.Source ?? "Manual";
             attendance.Remarks = dto.Remarks;
             attendance.ApprovedBy = approverId;
-            attendance.ApprovedDate = DateTime.Now;
-            attendance.ModifiedDate = DateTime.Now;
+            attendance.ApprovedDate = AppTime.Now;
+            attendance.ModifiedDate = AppTime.Now;
             attendance.ModifiedBy = approverId;
 
             if (attendance.CheckInTime.HasValue && attendance.CheckOutTime.HasValue)
@@ -564,9 +564,9 @@ namespace HRManagement.Services.Attendances
                 IsManualAdjusted = true,
                 IsLocked = false,
                 ApprovedBy = approverId,
-                ApprovedDate = DateTime.Now,
+                ApprovedDate = AppTime.Now,
                 Remarks = dto.Remarks,
-                CreatedDate = DateTime.Now,
+                CreatedDate = AppTime.Now,
                 ModifiedDate = null,
                 ModifiedBy = null
             };
@@ -586,7 +586,7 @@ namespace HRManagement.Services.Attendances
                 ?? throw new InvalidOperationException("KhÃ´ng tÃ¬m tháº¥y báº£n ghi cháº¥m cÃ´ng.");
 
             attendance.IsLocked = true;
-            attendance.ModifiedDate = DateTime.Now;
+            attendance.ModifiedDate = AppTime.Now;
             attendance.ModifiedBy = userId;
 
             await _attendanceRepository.UpdateAttendanceAsync(attendance);
@@ -608,7 +608,7 @@ namespace HRManagement.Services.Attendances
                 throw new InvalidOperationException("Bản ghi này thuộc kỳ lương đã được phê duyệt, không thể mở khóa.");
 
             attendance.IsLocked = false;
-            attendance.ModifiedDate = DateTime.Now;
+            attendance.ModifiedDate = AppTime.Now;
             attendance.ModifiedBy = userId;
 
             await _attendanceRepository.UpdateAttendanceAsync(attendance);
@@ -689,7 +689,7 @@ namespace HRManagement.Services.Attendances
                     Source = "System",
                     IsManualAdjusted = false,
                     IsLocked = false,
-                    CreatedDate = DateTime.Now
+                    CreatedDate = AppTime.Now
                 };
                 await _attendanceRepository.AddAttendanceAsync(attendance);
             }
@@ -717,7 +717,7 @@ namespace HRManagement.Services.Attendances
             if (!string.Equals(attendance.ExplanationStatus, "Pending", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Phi?u gi?i trï¿½nh nï¿½y khï¿½ng cï¿½n ? tr?ng thï¿½i ch? duy?t.");
 
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = DateOnly.FromDateTime(AppTime.Now);
             if (attendance.AttendanceDate >= today)
                 throw new InvalidOperationException("Phiáº¿u giáº£i trÃ¬nh cho ngÃ y hiá»‡n táº¡i chá»‰ cÃ³ thá»ƒ Ä‘Æ°á»£c phÃª duyá»‡t sau khi ngÃ y lÃ m viá»‡c káº¿t thÃºc (tá»« ngÃ y mai).");
 
@@ -741,8 +741,8 @@ namespace HRManagement.Services.Attendances
 
             attendance.ExplanationResponse = dto.Response;
             attendance.ApprovedBy = managerId;
-            attendance.ApprovedDate = DateTime.Now;
-            attendance.ModifiedDate = DateTime.Now;
+            attendance.ApprovedDate = AppTime.Now;
+            attendance.ModifiedDate = AppTime.Now;
             attendance.ModifiedBy = managerId;
 
             await _attendanceRepository.UpdateAttendanceAsync(attendance);

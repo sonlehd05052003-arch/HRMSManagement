@@ -218,7 +218,7 @@ namespace HRManagement.Controllers
             company.Phone        = dto.Phone?.Trim();
             company.Email        = dto.Email?.Trim();
             if (dto.TaxCode != null) company.TaxCode = dto.TaxCode.Trim();
-            company.ModifiedDate = DateTime.Now;
+            company.ModifiedDate = AppTime.Now;
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thông tin công ty thành công." });
@@ -244,14 +244,14 @@ namespace HRManagement.Controllers
                     SettingKey = key,
                     SettingValue = value,
                     SettingCategory = category,
-                    ModifiedDate = DateTime.Now,
+                    ModifiedDate = AppTime.Now,
                     ModifiedBy = modifiedBy
                 });
             }
             else
             {
                 exists.SettingValue = value;
-                exists.ModifiedDate = DateTime.Now;
+                exists.ModifiedDate = AppTime.Now;
                 exists.ModifiedBy = modifiedBy;
             }
         }

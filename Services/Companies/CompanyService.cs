@@ -119,7 +119,7 @@ namespace HRManagement.Services.Companies
                 Phone = dto.Phone?.Trim(),
                 Address = dto.Address?.Trim(),
                 IsActive = true,
-                CreatedDate = DateTime.Now
+                CreatedDate = AppTime.Now
             };
             _context.Companies.Add(company);
             await _context.SaveChangesAsync();
@@ -133,7 +133,7 @@ namespace HRManagement.Services.Companies
                 RoleName = t.RoleName,
                 Description = t.Description,
                 IsActive = t.IsActive,
-                CreatedDate = DateTime.Now,
+                CreatedDate = AppTime.Now,
                 RolePermissions = t.RolePermissions.Select(rp => new RolePermission { PermissionId = rp.PermissionId }).ToList(),
                 RoleMenus = t.RoleMenus.Select(rm => new RoleMenu { MenuId = rm.MenuId }).ToList()
             }).ToList();
@@ -149,7 +149,7 @@ namespace HRManagement.Services.Companies
                 FirstName = dto.Admin.FirstName.Trim(),
                 LastName = dto.Admin.LastName.Trim(),
                 Email = adminEmail,
-                JoinDate = DateOnly.FromDateTime(DateTime.Today),
+                JoinDate = DateOnly.FromDateTime(AppTime.Today),
                 EmploymentStatus = "Active"
             };
             _context.Employees.Add(adminEmployee);
@@ -189,24 +189,24 @@ namespace HRManagement.Services.Companies
         {
             var leaveTypes = await _context.LeaveTypes.IgnoreQueryFilters().AsNoTracking()
                 .Where(x => x.CompanyId == TemplateCompanyId).ToListAsync();
-            foreach (var x in leaveTypes) { x.LeaveTypeId = 0; x.CompanyId = companyId; x.CreatedBy = null; x.CreatedDate = DateTime.Now; }
+            foreach (var x in leaveTypes) { x.LeaveTypeId = 0; x.CompanyId = companyId; x.CreatedBy = null; x.CreatedDate = AppTime.Now; }
             _context.LeaveTypes.AddRange(leaveTypes);
 
             var shifts = await _context.Shifts.IgnoreQueryFilters().AsNoTracking()
                 .Where(x => x.CompanyId == TemplateCompanyId).ToListAsync();
-            foreach (var x in shifts) { x.ShiftId = 0; x.CompanyId = companyId; x.CreatedBy = null; x.CreatedDate = DateTime.Now; }
+            foreach (var x in shifts) { x.ShiftId = 0; x.CompanyId = companyId; x.CreatedBy = null; x.CreatedDate = AppTime.Now; }
             _context.Shifts.AddRange(shifts);
 
             var policies = await _context.PayrollPolicies.IgnoreQueryFilters().AsNoTracking()
                 .Where(x => x.CompanyId == TemplateCompanyId).ToListAsync();
-            foreach (var x in policies) { x.PolicyId = 0; x.CompanyId = companyId; x.CreatedBy = null; x.ModifiedBy = null; x.ModifiedDate = null; x.CreatedDate = DateTime.Now; }
+            foreach (var x in policies) { x.PolicyId = 0; x.CompanyId = companyId; x.CreatedBy = null; x.ModifiedBy = null; x.ModifiedDate = null; x.CreatedDate = AppTime.Now; }
             _context.PayrollPolicies.AddRange(policies);
 
             var settings = (await _context.SystemSettings.IgnoreQueryFilters().AsNoTracking()
                     .Where(x => x.CompanyId == TemplateCompanyId).ToListAsync())
                 .Where(x => CopiedSettingPrefixes.Any(p => x.SettingKey.StartsWith(p, StringComparison.Ordinal)))
                 .ToList();
-            foreach (var x in settings) { x.SettingId = 0; x.CompanyId = companyId; x.ModifiedBy = null; x.ModifiedDate = DateTime.Now; }
+            foreach (var x in settings) { x.SettingId = 0; x.CompanyId = companyId; x.ModifiedBy = null; x.ModifiedDate = AppTime.Now; }
             _context.SystemSettings.AddRange(settings);
         }
 
@@ -226,7 +226,7 @@ namespace HRManagement.Services.Companies
             company.Email = dto.Email?.Trim();
             company.Phone = dto.Phone?.Trim();
             company.Address = dto.Address?.Trim();
-            company.ModifiedDate = DateTime.Now;
+            company.ModifiedDate = AppTime.Now;
 
             await _context.SaveChangesAsync();
             return (true, null);
@@ -239,7 +239,7 @@ namespace HRManagement.Services.Companies
                 return (false, null);
 
             company.IsActive = isActive;
-            company.ModifiedDate = DateTime.Now;
+            company.ModifiedDate = AppTime.Now;
             await _context.SaveChangesAsync();
             return (true, null);
         }

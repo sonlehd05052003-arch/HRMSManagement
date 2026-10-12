@@ -51,7 +51,7 @@ namespace HRManagement.DataAcess.Implementations
         }
         public async Task<bool> HasActiveOrFutureAssignmentsAsync(int shiftId)
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateOnly.FromDateTime(AppTime.Today);
 
             return await _context.ShiftAssignments.AnyAsync(x =>
                 x.ShiftId == shiftId &&

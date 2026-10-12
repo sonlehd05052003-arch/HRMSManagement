@@ -33,7 +33,7 @@ namespace HRManagement.Services.Shifts
             if (employee.EmploymentStatus != "Active")
                 throw new InvalidOperationException("Nhân viên không có trạng thái hoạt động.");
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var today = DateOnly.FromDateTime(AppTime.Today);
             if (employee.JoinDate > today)
                 throw new InvalidOperationException("Nhân viên chưa bắt đầu làm việc.");
 
@@ -97,7 +97,7 @@ namespace HRManagement.Services.Shifts
                             ? $"Weekly:{string.Join(",", dto.DaysOfWeek ?? new List<int>())}"
                             : "Daily",
                         Status = "Active",
-                        CreatedDate = DateTime.Now,
+                        CreatedDate = AppTime.Now,
                         CreatedBy = managerId
                     };
 

@@ -72,7 +72,7 @@ namespace HRManagement.Services.Payroll
 
             var dto = _mapper.Map<PayrollPeriodDto>(period);
             dto.ReviewDeadline        = period.ReviewDeadline;
-            dto.ReviewDeadlineExpired = period.ReviewDeadline.HasValue && DateTime.Now > period.ReviewDeadline.Value;
+            dto.ReviewDeadlineExpired = period.ReviewDeadline.HasValue && AppTime.Now > period.ReviewDeadline.Value;
             return dto;
         }
 
@@ -154,7 +154,7 @@ namespace HRManagement.Services.Payroll
             if (period.Status == "Approved")
                 throw new InvalidOperationException("Kỳ lương đã được duyệt, không thể tính lại.");
 
-            if (period.ReviewDeadline.HasValue && DateTime.Now < period.ReviewDeadline.Value)
+            if (period.ReviewDeadline.HasValue && AppTime.Now < period.ReviewDeadline.Value)
                 throw new InvalidOperationException("Chưa hết hạn review chấm công, chưa thể tính lương.");
 
             var employee = await _context.Employees
@@ -268,7 +268,7 @@ namespace HRManagement.Services.Payroll
             record.TotalDeductions = totalDeductions;
             record.NetPay = netPay;
             record.Status = "Calculated";
-            record.CalculatedDate = DateTime.Now;
+            record.CalculatedDate = AppTime.Now;
 
             // Xử lý quan hệ 1-n: Cách an toàn nhất là xóa n và add lại
             if (existingRecord != null)
@@ -309,7 +309,7 @@ namespace HRManagement.Services.Payroll
             if (period.Status == "Approved")
                 throw new InvalidOperationException("Kỳ lương đã được duyệt, không thể tính lại.");
 
-            if (period.ReviewDeadline.HasValue && DateTime.Now < period.ReviewDeadline.Value)
+            if (period.ReviewDeadline.HasValue && AppTime.Now < period.ReviewDeadline.Value)
                 throw new InvalidOperationException("Chưa hết hạn review chấm công, chưa thể tính lương.");
 
             var employees = await _context.Employees
@@ -324,7 +324,7 @@ namespace HRManagement.Services.Payroll
             if (periodToUpdate != null && periodToUpdate.Status != "Approved")
             {
                 periodToUpdate.Status = "Calculated";
-                periodToUpdate.CalculatedDate = DateTime.Now;
+                periodToUpdate.CalculatedDate = AppTime.Now;
                 await _context.SaveChangesAsync();
             }
 
@@ -448,7 +448,7 @@ namespace HRManagement.Services.Payroll
                 throw new InvalidOperationException("Chỉ có thể phê duyệt kỳ lương đang ở trạng thái Đã tính lương.");
 
             period.Status = "Approved";
-            period.ApprovedDate = DateTime.Now;
+            period.ApprovedDate = AppTime.Now;
             period.ApprovedBy = approvedByUserId;
             await _periodRepo.UpdateAsync(period);
 
@@ -465,7 +465,7 @@ namespace HRManagement.Services.Payroll
             foreach (var att in attendanceToLock)
             {
                 att.IsLocked = true;
-                att.ModifiedDate = DateTime.Now;
+                att.ModifiedDate = AppTime.Now;
             }
             foreach (var record in records)
             {
@@ -479,7 +479,7 @@ namespace HRManagement.Services.Payroll
                     EmployeeId      = record.EmployeeId,
                     PeriodId        = periodId,
                     PayslipNumber   = $"PS-{period.Year}{period.Month:D2}-{record.PayrollRecordId:D5}",
-                    GeneratedDate   = DateTime.Now,
+                    GeneratedDate   = AppTime.Now,
                     IsViewed        = false,
                 });
             }
@@ -499,7 +499,7 @@ namespace HRManagement.Services.Payroll
             period.Status          = "Rejected";
             period.RejectionReason = reason;
             period.RejectedBy      = rejectedByUserId;
-            period.RejectedDate    = DateTime.Now;
+            period.RejectedDate    = AppTime.Now;
             await _periodRepo.UpdateAsync(period);
 
             // Xoá toàn bộ feedback và payslip cũ để nhân viên feedback lại sau khi HR tính toán lại
@@ -557,7 +557,7 @@ namespace HRManagement.Services.Payroll
                 foreach (var att in toLock)
                 {
                     att.IsLocked = true;
-                    att.ModifiedDate = DateTime.Now;
+                    att.ModifiedDate = AppTime.Now;
                 }
                 totalLocked += toLock.Count;
             }
@@ -570,7 +570,7 @@ namespace HRManagement.Services.Payroll
         {
             var record = await _payrollRepo.GetByIdAsync(payrollRecordId) ?? throw new KeyNotFoundException();
             record.Status = "Approved";
-            record.ApprovedDate = DateTime.Now;
+            record.ApprovedDate = AppTime.Now;
             // Thuộc tính ApprovedBy trong PayrollRecord model nếu có
             await _payrollRepo.UpdateAsync(record);
             return _mapper.Map<PayrollRecordDto>(record);
@@ -596,7 +596,7 @@ namespace HRManagement.Services.Payroll
                     EmployeeId      = record.EmployeeId,
                     PeriodId        = periodId,
                     PayslipNumber   = $"PS-{period.Year}{period.Month:D2}-{record.PayrollRecordId:D5}",
-                    GeneratedDate   = DateTime.Now,
+                    GeneratedDate   = AppTime.Now,
                     IsViewed        = false,
                 });
                 created++;
@@ -622,7 +622,7 @@ namespace HRManagement.Services.Payroll
             payslip.EmployeeId = record.EmployeeId;
             payslip.PeriodId = record.PeriodId;
             payslip.PayslipNumber = $"PS-{period.Year}{period.Month:D2}-{record.PayrollRecordId:D5}";
-            payslip.GeneratedDate = DateTime.Now;
+            payslip.GeneratedDate = AppTime.Now;
             payslip.IsViewed = false;
 
             if (existingPayslip == null)

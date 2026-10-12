@@ -159,7 +159,7 @@ namespace HRManagement.Services.HRProceduces
             if (employee.JoinDate > createDto.EffectiveDate)
                 throw new ArgumentException("Cannot create procedure before join date.");
 
-            if (createDto.EffectiveDate < DateOnly.FromDateTime(DateTime.UtcNow))
+            if (createDto.EffectiveDate < DateOnly.FromDateTime(AppTime.Today))
                 throw new ArgumentException("Effective date cannot be in the past.");
 
             if (await _hrProcedureRepository.HasActiveProcedureAsync(createDto.EmployeeId, createDto.ProcedureType))
@@ -404,7 +404,7 @@ namespace HRManagement.Services.HRProceduces
 
         /// <summary>Phase 2: nên apply ngay nếu EffectiveDate &lt;= hôm nay</summary>
         private static bool ShouldApplyNow(Hrprocedure procedure)
-            => procedure.EffectiveDate <= DateOnly.FromDateTime(DateTime.Today);
+            => procedure.EffectiveDate <= DateOnly.FromDateTime(AppTime.Today);
 
         /// <summary>Phase 2: ghi thay đổi vào employee profile</summary>
         private async Task ApplyProcedureToEmployeeAsync(Hrprocedure procedure, int? appliedBy = null)
@@ -554,7 +554,7 @@ namespace HRManagement.Services.HRProceduces
 
         private static string GenerateProcedureNumber()
         {
-            var datePrefix = DateTime.UtcNow.ToString("yyyyMMdd");
+            var datePrefix = AppTime.Now.ToString("yyyyMMdd");
             var random = new Random().Next(1000, 9999);
             return $"PR-{datePrefix}-{random}";
         }

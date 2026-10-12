@@ -46,7 +46,7 @@ namespace HRManagement.Services.Employees
         }
         public async Task<EmployeeResponseDetailDto> AddEmployeeAsync(CreateEmployeeDto dto)
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var today = DateOnly.FromDateTime(AppTime.Today);
 
             if (await _employeeRepository.EmailExistsAsync(dto.Email))
                 throw new InvalidOperationException($"Email '{dto.Email}' already exists.");
@@ -190,7 +190,7 @@ namespace HRManagement.Services.Employees
                 return false;
 
             if (status == "Resigned" || status == "Terminated" || status == "Inactive")
-                employee.ResignationDate = DateOnly.FromDateTime(DateTime.UtcNow);
+                employee.ResignationDate = DateOnly.FromDateTime(AppTime.Today);
 
             if (status == "Active")
                 employee.ResignationDate = null;
@@ -299,7 +299,7 @@ namespace HRManagement.Services.Employees
             if (employee == null)
                 throw new KeyNotFoundException($"Employee {employeeId} not found.");
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var today = DateOnly.FromDateTime(AppTime.Today);
 
             if (dto.BaseSalary < 0)
                 throw new ArgumentException("Base salary cannot be negative.");

@@ -152,11 +152,11 @@ namespace HRManagement.Services.Leaves
                 Reason = dto.Reason,
                 Status = initialStatus,
                 TargetApproverId = approverId,
-                SubmittedDate = DateTime.Now,
-                ReviewedDate = initialStatus == "Approved" ? DateTime.Now : null,
+                SubmittedDate = AppTime.Now,
+                ReviewedDate = initialStatus == "Approved" ? AppTime.Now : null,
                 ReviewedBy = initialStatus == "Approved" ? null : null, // System approved
                 ReviewerComments = initialStatus == "Approved" ? "Auto-approved by system (Top-level no fallback)" : null,
-                ApprovedDate = initialStatus == "Approved" ? DateTime.Now : null,
+                ApprovedDate = initialStatus == "Approved" ? AppTime.Now : null,
                 ApprovedBy = null // System
             };
 
@@ -173,7 +173,7 @@ namespace HRManagement.Services.Leaves
                     RelatedEntity = "LeaveRequest",
                     RelatedEntityId = leaveRequest.LeaveRequestId,
                     IsRead = false,
-                    SentDate = DateTime.Now
+                    SentDate = AppTime.Now
                 };
                 _context.Notifications.Add(notification);
             }
@@ -183,7 +183,7 @@ namespace HRManagement.Services.Leaves
             {
                 leaveBalance.UsedDays += dto.NumberOfDays;
                 leaveBalance.RemainingDays = (leaveBalance.TotalEntitlement + leaveBalance.CarriedForward) - leaveBalance.UsedDays;
-                leaveBalance.LastUpdated = DateTime.Now;
+                leaveBalance.LastUpdated = AppTime.Now;
             }
 
             await _context.SaveChangesAsync();
@@ -206,7 +206,7 @@ namespace HRManagement.Services.Leaves
                     leaveRequest.Reason,
                     leaveRequest.Status
                 }),
-                ActionDate = DateTime.Now
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(auditLog);
@@ -236,7 +236,7 @@ namespace HRManagement.Services.Leaves
 
         private async Task<string> GenerateRequestNumberAsync()
         {
-            var today = DateTime.Now;
+            var today = AppTime.Now;
             string prefix = $"LR-{today:yyyyMMdd}";
 
             int countToday = await _context.LeaveRequests
@@ -313,7 +313,7 @@ namespace HRManagement.Services.Leaves
                         UsedDays = 0,
                         CarriedForward = 0,
                         RemainingDays = leaveType.AnnualEntitlement,
-                        LastUpdated = DateTime.Now
+                        LastUpdated = AppTime.Now
                     };
                     _context.LeaveBalances.Add(leaveBalance);
                 }
@@ -326,13 +326,13 @@ namespace HRManagement.Services.Leaves
                 // Allow negative balance, but log it or handle it in Salary calculation later
                 leaveBalance.UsedDays += leaveRequest.NumberOfDays;
                 leaveBalance.RemainingDays = (leaveBalance.TotalEntitlement + leaveBalance.CarriedForward) - leaveBalance.UsedDays;
-                leaveBalance.LastUpdated = DateTime.Now;
+                leaveBalance.LastUpdated = AppTime.Now;
             }
 
             leaveRequest.Status = "Approved";
-            leaveRequest.ApprovedDate = DateTime.Now;
+            leaveRequest.ApprovedDate = AppTime.Now;
             leaveRequest.ApprovedBy = managerUserId;
-            leaveRequest.ReviewedDate = DateTime.Now;
+            leaveRequest.ReviewedDate = AppTime.Now;
             leaveRequest.ReviewedBy = managerUserId;
             leaveRequest.ReviewerComments = dto.Comments;
             leaveRequest.RejectionReason = null;
@@ -351,7 +351,7 @@ namespace HRManagement.Services.Leaves
                     RelatedEntity = "LeaveRequest",
                     RelatedEntityId = leaveRequest.LeaveRequestId,
                     IsRead = false,
-                    SentDate = DateTime.Now
+                    SentDate = AppTime.Now
                 };
 
                 _context.Notifications.Add(notification);
@@ -374,7 +374,7 @@ namespace HRManagement.Services.Leaves
                     leaveRequest.ReviewerComments,
                     UpdatedLeaveBalanceUsedDays = leaveBalance?.UsedDays
                 }),
-                ActionDate = DateTime.Now
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(auditLog);
@@ -430,7 +430,7 @@ namespace HRManagement.Services.Leaves
 
             leaveRequest.Status = "Rejected";
             leaveRequest.RejectionReason = dto.RejectionReason;
-            leaveRequest.ReviewedDate = DateTime.Now;
+            leaveRequest.ReviewedDate = AppTime.Now;
             leaveRequest.ReviewedBy = managerUserId;
             leaveRequest.ReviewerComments = dto.RejectionReason;
             leaveRequest.ApprovedDate = null;
@@ -450,7 +450,7 @@ namespace HRManagement.Services.Leaves
                     RelatedEntity = "LeaveRequest",
                     RelatedEntityId = leaveRequest.LeaveRequestId,
                     IsRead = false,
-                    SentDate = DateTime.Now
+                    SentDate = AppTime.Now
                 };
 
                 _context.Notifications.Add(notification);
@@ -471,7 +471,7 @@ namespace HRManagement.Services.Leaves
                     leaveRequest.ReviewedBy,
                     leaveRequest.ReviewerComments
                 }),
-                ActionDate = DateTime.Now
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(auditLog);
@@ -513,7 +513,7 @@ namespace HRManagement.Services.Leaves
             leaveRequest.Status = "Cancelled";
             leaveRequest.ReviewerComments = dto.Reason;
             leaveRequest.RejectionReason = dto.Reason;
-            leaveRequest.ReviewedDate = DateTime.Now;
+            leaveRequest.ReviewedDate = AppTime.Now;
             leaveRequest.ReviewedBy = userId;
             leaveRequest.ApprovedDate = null;
             leaveRequest.ApprovedBy = null;
@@ -535,7 +535,7 @@ namespace HRManagement.Services.Leaves
                     leaveRequest.ReviewedDate,
                     leaveRequest.ReviewedBy
                 }),
-                ActionDate = DateTime.Now
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(auditLog);
