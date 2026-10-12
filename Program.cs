@@ -146,6 +146,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// GET /health: whether the API can reach its database, for load balancers and uptime monitors
+builder.Services.AddHealthChecks().AddDbContextCheck<HrmsDbContext>("database");
+
 // Swagger/API Documentation
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -309,5 +312,6 @@ recurringJobs.AddOrUpdate<HRProcedureBackgroundService>(
 recurringJobs.AddOrUpdate<PayrollAttendanceReviewService>(
     PayrollAttendanceReviewService.JobId, job => job.TriggerDuePeriodReviewsAsync(), Cron.Hourly(), jobOptions);
 
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 app.Run();
