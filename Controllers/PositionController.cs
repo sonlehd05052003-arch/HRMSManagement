@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using HRManagement.Authorization;
 using HRManagement.DTOs;
 using HRManagement.Services.Positions;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,7 @@ namespace HRManagement.Controllers
             _positionService = positionService;
         }
         [HttpPost]
+        [RequirePermission("Employee.Manage")]
         public async Task<ActionResult<PositionResponseDto>> CreatePosition([FromBody] CreatePositionDto createDto)
         {
             try
@@ -58,6 +60,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPut("{id}")]
+        [RequirePermission("Employee.Manage")]
         public async Task<ActionResult<PositionResponseDto>> UpdatePosition(
             int id,
             [FromBody] UpdatePositionDto updateDto)
@@ -78,6 +81,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPatch("{id}/deactivate")]
+        [RequirePermission("Employee.Manage")]
         public async Task<ActionResult> DeactivatePosition(int id)
         {
             try
@@ -96,6 +100,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPatch("{id}/activate")]
+        [RequirePermission("Employee.Manage")]
         public async Task<ActionResult> ActivatePosition(int id)
         {
             var success = await _positionService.ActivatePositionAsync(id);

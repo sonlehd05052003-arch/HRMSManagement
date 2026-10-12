@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using HRManagement.Authorization;
 using HRManagement.DTOs;
 using HRManagement.Services.Employees;
 using Microsoft.AspNetCore.Mvc;
@@ -11,11 +12,35 @@ namespace HRManagement.Controllers
     public class EmployeeDocumentController : ControllerBase
     {
         private readonly IEmployeeDocumentService _documentService;
+        private readonly IAuthorizationService _authorizationService;
 
-        public EmployeeDocumentController(IEmployeeDocumentService documentService)
+        public EmployeeDocumentController(IEmployeeDocumentService documentService, IAuthorizationService authorizationService)
         {
             _documentService = documentService;
+            _authorizationService = authorizationService;
         }
+
+        /// <summary>
+        /// HR (Employee.Manage) works with anyone's documents; other users only with their own, from the profile page.
+        /// </summary>
+        private async Task<bool> CanAccessEmployeeAsync(int employeeId)
+        {
+            var manage = await _authorizationService.AuthorizeAsync(User, RequirePermissionAttribute.PolicyPrefix + "Employee.Manage");
+            if (manage.Succeeded)
+                return true;
+
+            return int.TryParse(User.FindFirst("employeeId")?.Value, out var ownEmployeeId) && ownEmployeeId == employeeId;
+        }
+
+        private async Task<bool> CanAccessDocumentAsync(int documentId)
+        {
+            var document = await _documentService.GetDocumentByIdAsync(documentId);
+            // An unknown document falls through to the action, which answers 404
+            return document == null || await CanAccessEmployeeAsync(document.EmployeeId);
+        }
+
+        private ObjectResult ForbiddenDocument() =>
+            StatusCode(StatusCodes.Status403Forbidden, new { message = "Bạn không có quyền truy cập tài liệu của nhân viên này." });
 
         [HttpPost("upload")]
         public async Task<ActionResult<EmployeeDocumentResponseDto>> Upload(
@@ -26,6 +51,9 @@ namespace HRManagement.Controllers
             {
                 if (file == null || file.Length == 0)
                     return BadRequest(new { message = "File is required." });
+
+                if (!await CanAccessEmployeeAsync(uploadDto.EmployeeId))
+                    return ForbiddenDocument();
 
                 var result = await _documentService.UploadDocumentAsync(uploadDto, file);
 
@@ -51,6 +79,9 @@ namespace HRManagement.Controllers
         {
             try
             {
+                if (!await CanAccessDocumentAsync(documentId))
+                    return ForbiddenDocument();
+
                 var result = await _documentService.UpdateDocumentAsync(documentId, updateDto);
 
                 if (result == null)
@@ -71,6 +102,9 @@ namespace HRManagement.Controllers
         [HttpGet("employee/{employeeId}")]
         public async Task<ActionResult> GetDocumentsByEmployeeId(int employeeId)
         {
+            if (!await CanAccessEmployeeAsync(employeeId))
+                return ForbiddenDocument();
+
             var documents = await _documentService.GetEmployeeDocumentsAsync(employeeId);
 
             if (documents == null || !documents.Any())
@@ -87,12 +121,18 @@ namespace HRManagement.Controllers
             if (document == null)
                 return NotFound(new { message = $"Document {documentId} not found." });
 
+            if (!await CanAccessEmployeeAsync(document.EmployeeId))
+                return ForbiddenDocument();
+
             return Ok(document);
         }
 
         [HttpGet("{documentId}/download")]
         public async Task<ActionResult> Download(int documentId)
         {
+            if (!await CanAccessDocumentAsync(documentId))
+                return ForbiddenDocument();
+
             var fileData = await _documentService.DownloadDocumentAsync(documentId);
 
             if (fileData == null)
@@ -104,6 +144,9 @@ namespace HRManagement.Controllers
         [HttpDelete("{documentId}")]
         public async Task<ActionResult> Delete(int documentId)
         {
+            if (!await CanAccessDocumentAsync(documentId))
+                return ForbiddenDocument();
+
             var success = await _documentService.DeleteDocumentAsync(documentId);
 
             if (!success)
@@ -115,6 +158,9 @@ namespace HRManagement.Controllers
         [HttpGet("employee/{employeeId}/category/{category}")]
         public async Task<ActionResult> GetDocumentsByCategory(int employeeId, string category)
         {
+            if (!await CanAccessEmployeeAsync(employeeId))
+                return ForbiddenDocument();
+
             var documents = await _documentService.GetDocumentsByCategoryAsync(employeeId, category);
 
             if (documents == null || !documents.Any())

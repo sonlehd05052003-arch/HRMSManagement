@@ -1,4 +1,5 @@
 ﻿using HRManagement.DTOs;
+using HRManagement.Authorization;
 using HRManagement.Services.Departments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPost]
+        [RequirePermission("Employee.Manage")]
         public async Task<ActionResult<DepartmentResponseDto>> CreateDepartment([FromBody] CreateDepartmentDto createDto)
         {
             try
@@ -64,6 +66,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPut("{id}")]
+        [RequirePermission("Employee.Manage")]
         public async Task<ActionResult<DepartmentResponseDto>> UpdateDepartment(
             int id,
             [FromBody] UpdateDepartmentDto updateDto)
@@ -84,6 +87,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPatch("{id}/deactivate")]
+        [RequirePermission("Employee.Manage")]
         public async Task<ActionResult> DeactivateDepartment(int id)
         {
             try
@@ -102,6 +106,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPatch("{id}/activate")]
+        [RequirePermission("Employee.Manage")]
         public async Task<ActionResult> ActivateDepartment(int id)
         {
             var success = await _departmentService.ActivateDepartmentAsync(id);

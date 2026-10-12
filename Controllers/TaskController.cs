@@ -42,8 +42,9 @@ namespace HRManagement.Controllers
         [HttpPut("{id}")]
         public async System.Threading.Tasks.Task<IActionResult> Update(int id, UpdateTaskDTO dto)
         {
-            var (success, error, notFound) = await _taskService.UpdateAsync(id, dto);
+            var (success, error, notFound, forbidden) = await _taskService.UpdateAsync(id, GetCurrentUserId(), dto);
             if (notFound) return NotFound("Task not found");
+            if (forbidden) return StatusCode(StatusCodes.Status403Forbidden, new { message = error });
             if (!success) return BadRequest(error);
             return Ok("Task updated successfully");
         }
@@ -53,7 +54,7 @@ namespace HRManagement.Controllers
         {
             var (success, error, notFound, forbidden) = await _taskService.ApproveAsync(id, GetCurrentUserId(), dto);
             if (notFound) return NotFound("Task not found");
-            if (forbidden) return Forbid(error!);
+            if (forbidden) return StatusCode(StatusCodes.Status403Forbidden, new { message = error });
             if (!success) return BadRequest(error);
             return Ok("Task approved successfully");
         }
@@ -63,7 +64,7 @@ namespace HRManagement.Controllers
         {
             var (success, error, notFound, forbidden) = await _taskService.RejectAsync(id, GetCurrentUserId(), dto);
             if (notFound) return NotFound("Task not found");
-            if (forbidden) return Forbid(error!);
+            if (forbidden) return StatusCode(StatusCodes.Status403Forbidden, new { message = error });
             if (!success) return BadRequest(error);
             return Ok("Task rejected successfully");
         }
@@ -73,7 +74,7 @@ namespace HRManagement.Controllers
         {
             var (success, error, notFound, forbidden) = await _taskService.CancelAsync(id, GetCurrentUserId());
             if (notFound) return NotFound("Task not found");
-            if (forbidden) return Forbid(error!);
+            if (forbidden) return StatusCode(StatusCodes.Status403Forbidden, new { message = error });
             if (!success) return BadRequest(error);
             return Ok("Task cancelled successfully");
         }

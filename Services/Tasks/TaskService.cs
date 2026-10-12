@@ -45,22 +45,25 @@ namespace HRManagement.Services.Tasks
             return (true, null, _mapper.Map<TaskDTO>(result));
         }
 
-        public async System.Threading.Tasks.Task<(bool Success, string? Error, bool NotFound)> UpdateAsync(int id, UpdateTaskDTO dto)
+        public async System.Threading.Tasks.Task<(bool Success, string? Error, bool NotFound, bool Forbidden)> UpdateAsync(int id, int currentUserId, UpdateTaskDTO dto)
         {
             var task = await _taskRepository.FindAsync(id);
             if (task is null)
-                return (false, null, true);
+                return (false, null, true, false);
+
+            if (task.CreatedBy != currentUserId)
+                return (false, "You are not allowed to edit this task", false, true);
 
             if (dto.AssignedTo.HasValue && !await _taskRepository.UserExistsAsync(dto.AssignedTo.Value))
-                return (false, "Assigned user does not exist", false);
+                return (false, "Assigned user does not exist", false, false);
 
             if (task.Status != "Pending")
-                return (false, "Only pending tasks can be edited", false);
+                return (false, "Only pending tasks can be edited", false, false);
 
             _mapper.Map(dto, task);
             await _taskRepository.SaveChangesAsync();
 
-            return (true, null, false);
+            return (true, null, false, false);
         }
 
         public async System.Threading.Tasks.Task<(bool Success, string? Error, bool NotFound, bool Forbidden)> ApproveAsync(int id, int currentUserId, ApproveTaskDTO dto)
