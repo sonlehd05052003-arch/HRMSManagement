@@ -33,6 +33,7 @@ namespace HRManagement.Controllers
 
 
         [HttpPost("checkin")]
+        [Authorize]
         public async Task<IActionResult> FaceCheckIn([FromBody] CheckInRequestDto request)
         {
             try
@@ -108,6 +109,7 @@ namespace HRManagement.Controllers
         }
 
         [HttpPost("checkout")]
+        [Authorize]
         public async Task<IActionResult> FaceCheckOut([FromBody] CheckOutRequestDto request)
         {
             try

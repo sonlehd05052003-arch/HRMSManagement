@@ -1,9 +1,11 @@
-﻿using HRManagement.DTOs;
+﻿using Microsoft.AspNetCore.Authorization;
+using HRManagement.DTOs;
 using HRManagement.Services.Positions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HRManagement.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class PositionController : ControllerBase

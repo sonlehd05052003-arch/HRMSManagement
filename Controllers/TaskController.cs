@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using HRManagement.DTOs;
 using HRManagement.Services.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -5,6 +6,7 @@ using System.Security.Claims;
 
 namespace HRManagement.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class TaskController : ControllerBase
