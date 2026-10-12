@@ -7,6 +7,13 @@
     <UserSecretsId>c83513c8-2d4e-4555-8abe-9b54ad4f6ca3</UserSecretsId>
   </PropertyGroup>
 
+  <!-- The test project lives under this folder but builds on its own -->
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <Content Remove="Tests\**" />
+    <None Remove="Tests\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Remove="AIModels\face_detection_yunet_2023mar.onnx" />
     <None Remove="AIModels\face_recognition_sface_2021dec.onnx" />
