@@ -45,8 +45,11 @@ var builder = WebApplication.CreateBuilder(args);
 AppTime.Configure(builder.Configuration["App:TimeZone"]);
 
 // Database Configuration
-builder.Services.AddDbContext<HrmsDbContext>(options =>
+// Every save of pay, attendance, leave balance, employee, role and setting rows is written to AuditLogs
+builder.Services.AddSingleton<AuditSaveChangesInterceptor>();
+builder.Services.AddDbContext<HrmsDbContext>((services, options) =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn"))
+        .AddInterceptors(services.GetRequiredService<AuditSaveChangesInterceptor>())
 );
 
 // Infrastructure

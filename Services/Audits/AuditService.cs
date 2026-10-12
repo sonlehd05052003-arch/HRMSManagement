@@ -20,7 +20,7 @@ namespace HRManagement.Services.Audits
                 RecordId = 0,
                 UserId = userId,
                 NewValues = description,
-                ActionDate = DateTime.UtcNow
+                ActionDate = AppTime.Now
             };
 
             _context.AuditLogs.Add(log);
