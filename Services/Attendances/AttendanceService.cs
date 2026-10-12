@@ -1,5 +1,6 @@
 using AutoMapper;
 using HRManagement.DataAcess.Interfaces;
+using HRManagement.DTOs;
 using HRManagement.DTOs.Attendances;
 using HRManagement.Models;
 using HRManagement.Services.FaceVerifications;
@@ -303,13 +304,47 @@ namespace HRManagement.Services.Attendances
             return await SearchAttendanceWithLeavesAsync(fromDate, toDate, employeeId, status);
         }
 
+        public async Task<PagedResultDto<AttendanceResponseDto>> SearchAttendancePageAsync(
+            DateOnly? fromDate, DateOnly? toDate, int? employeeId, string? status, string? explanationStatus,
+            int? managerEmployeeId, int page, int pageSize)
+        {
+            var result = new PagedResultDto<AttendanceResponseDto> { Page = page, PageSize = pageSize };
+
+            // A manager only sees their direct reports (the client used to download everyone and hide the rest)
+            HashSet<int>? team = null;
+            if (managerEmployeeId.HasValue)
+            {
+                team = (await _context.Employees.AsNoTracking()
+                        .Where(e => e.ManagerId == managerEmployeeId.Value)
+                        .Select(e => e.EmployeeId)
+                        .ToListAsync())
+                    .ToHashSet();
+                if (employeeId.HasValue && !team.Contains(employeeId.Value))
+                    return result;
+            }
+
+            // Leave and absence rows are built in memory from several tables, so the page is cut after merging
+            IEnumerable<AttendanceResponseDto> rows = await SearchAttendanceWithLeavesAsync(fromDate, toDate, employeeId, status);
+            if (team != null)
+                rows = rows.Where(r => team.Contains(r.EmployeeId));
+            if (!string.IsNullOrWhiteSpace(explanationStatus))
+                rows = rows.Where(r => r.ExplanationStatus == explanationStatus);
+
+            var all = rows.ToList();
+            result.Total = all.Count;
+            result.Items = all.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            return result;
+        }
+
         private async Task<List<AttendanceResponseDto>> SearchAttendanceWithLeavesAsync(DateOnly? fromDate, DateOnly? toDate, int? employeeId, string? status)
         {
             var finalFrom = fromDate ?? DateOnly.FromDateTime(AppTime.Now).AddDays(-30);
             var finalTo = toDate ?? DateOnly.FromDateTime(AppTime.Now);
 
             // Same window as the overtime, leave and shift lookups below; without dates this used to load the whole history
-            var records = await _attendanceRepository.SearchAttendanceAsync(finalFrom, finalTo, employeeId, status);
+            // All statuses are loaded and the status filter is applied to the merged rows at the end: filtering here
+            // hid the days people did work, so the absence step below marked every one of them "Absent"
+            var records = await _attendanceRepository.SearchAttendanceAsync(finalFrom, finalTo, employeeId, null);
             
             // Dùng Dictionary để quản lý bản ghi theo (EmployeeId, Date)
             var attendanceMap = records
@@ -409,6 +444,20 @@ namespace HRManagement.Services.Attendances
                     .DistinctBy(x => x.EmployeeId)
                     .ToDictionary(x => x.EmployeeId, x => x.FullName);
 
+                // Employees with a shift but no attendance or leave in range (common when filtering by status):
+                // fetch their names in one query instead of one per employee
+                var missingNameIds = assignments.Select(a => a.EmployeeId).Distinct()
+                    .Where(id => !employeeNames.ContainsKey(id)).ToList();
+                if (missingNameIds.Count > 0)
+                {
+                    var missingNames = await _context.Employees.AsNoTracking()
+                        .Where(e => missingNameIds.Contains(e.EmployeeId))
+                        .Select(e => new { e.EmployeeId, e.FullName })
+                        .ToListAsync();
+                    foreach (var e in missingNames)
+                        employeeNames[e.EmployeeId] = e.FullName;
+                }
+
                 foreach (var assignment in assignments)
                 {
                     if (assignment.AssignmentDate >= today) continue;
@@ -453,7 +502,9 @@ namespace HRManagement.Services.Attendances
             // Override IsLocked cho các bản ghi thuộc kỳ lương đã phê duyệt
             await ApplyPayrollLockOverrideAsync(result);
 
-            return result.OrderByDescending(r => r.AttendanceDate).ThenBy(r => r.EmployeeName).ToList();
+            // Leave rows are added whatever status was asked for, so filter the final rows
+            var filtered = string.IsNullOrWhiteSpace(status) ? result : result.Where(r => r.Status == status);
+            return filtered.OrderByDescending(r => r.AttendanceDate).ThenBy(r => r.EmployeeName).ToList();
         }
 
         private async System.Threading.Tasks.Task ApplyPayrollLockOverrideAsync(List<AttendanceResponseDto> records)

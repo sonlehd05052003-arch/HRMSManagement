@@ -249,6 +249,41 @@ namespace HRManagement.Controllers
             }
         }
 
+        /// <summary>
+        /// Same search, one page at a time; a manager (MANAGE without ADMIN or HR) only gets their direct reports.
+        /// </summary>
+        [HttpGet("search-page")]
+        [Authorize]
+        public async Task<IActionResult> SearchPage(
+            [FromQuery] DateOnly? fromDate,
+            [FromQuery] DateOnly? toDate,
+            [FromQuery] int? employeeId,
+            [FromQuery] string? status,
+            [FromQuery] string? explanationStatus,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 15)
+        {
+            if (fromDate.HasValue && toDate.HasValue && fromDate > toDate)
+                return BadRequest(new { message = "Từ ngày không được lớn hơn đến ngày." });
+
+            if (fromDate.HasValue && toDate.HasValue && toDate.Value.DayNumber - fromDate.Value.DayNumber > 366)
+                return BadRequest(new { message = "Chỉ tìm kiếm được tối đa 1 năm mỗi lần." });
+
+            if (employeeId.HasValue && employeeId.Value <= 0)
+                return BadRequest(new { message = "EmployeeId không hợp lệ." });
+
+            if (page < 1 || pageSize < 1 || pageSize > 200)
+                return BadRequest(new { message = "Trang không hợp lệ (pageSize tối đa 200)." });
+
+            int? managerEmployeeId = null;
+            if (User.IsInRole("MANAGE") && !User.IsInRole("ADMIN") && !User.IsInRole("HR"))
+                managerEmployeeId = await _currentUserService.GetCurrentEmployeeIdAsync();
+
+            var result = await _attendanceService.SearchAttendancePageAsync(
+                fromDate, toDate, employeeId, status, explanationStatus, managerEmployeeId, page, pageSize);
+            return Ok(result);
+        }
+
         [HttpGet("{employeeId:int}/{date}")]
         [Authorize]
         public async Task<IActionResult> GetDetail(int employeeId, DateOnly date)

@@ -1,3 +1,4 @@
+using HRManagement.DTOs;
 using HRManagement.DTOs.Attendances;
 
 namespace HRManagement.Services.Attendances
@@ -12,6 +13,12 @@ namespace HRManagement.Services.Attendances
 
         Task<List<AttendanceResponseDto>> GetAttendanceByDateAsync(DateOnly date);
         Task<List<AttendanceResponseDto>> SearchAttendanceAsync(DateOnly? fromDate, DateOnly? toDate, int? employeeId, string? status);
+        /// <summary>
+        /// One page of the search. <paramref name="managerEmployeeId"/> limits it to that manager's direct reports.
+        /// </summary>
+        Task<PagedResultDto<AttendanceResponseDto>> SearchAttendancePageAsync(
+            DateOnly? fromDate, DateOnly? toDate, int? employeeId, string? status, string? explanationStatus,
+            int? managerEmployeeId, int page, int pageSize);
         Task<AttendanceDetailResponseDto?> GetAttendanceDetailAsync(int employeeId, DateOnly date);
 
         Task<AttendanceResponseDto> ManualAdjustAttendanceAsync(int attendanceId, int approverId, ManualAdjustAttendanceDto dto);
