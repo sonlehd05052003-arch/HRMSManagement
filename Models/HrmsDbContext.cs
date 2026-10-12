@@ -108,8 +108,10 @@ public partial class HrmsDbContext : DbContext
 
             entity.HasIndex(e => e.AttendanceDate, "IX_Attendance_Date");
 
-            entity.HasIndex(e => new { e.EmployeeId, e.AttendanceDate }, "IX_Attendance_EmployeeDate");
+            // Every query is filtered to the current company and usually a date range
+            entity.HasIndex(e => new { e.CompanyId, e.AttendanceDate }, "IX_AttendanceRecords_Company_Date");
 
+            // The unique index also serves employee + date lookups; a second, non-unique copy only slowed writes
             entity.HasIndex(e => new { e.EmployeeId, e.AttendanceDate }, "UQ_Attendance_EmployeeDate").IsUnique();
 
             entity.Property(e => e.AttendanceId).HasColumnName("AttendanceID");
@@ -807,6 +809,10 @@ public partial class HrmsDbContext : DbContext
         modelBuilder.Entity<ShiftAssignment>(entity =>
         {
             entity.HasKey(e => e.AssignmentId).HasName("PK__ShiftAss__32499E573BC5AE0C");
+
+            // One row per employee per day: queries look up a company's day range or one employee's day
+            entity.HasIndex(e => new { e.CompanyId, e.AssignmentDate }, "IX_ShiftAssignments_Company_Date");
+            entity.HasIndex(e => new { e.EmployeeId, e.AssignmentDate }, "IX_ShiftAssignments_Employee_Date");
 
             entity.Property(e => e.AssignmentId).HasColumnName("AssignmentID");
             entity.Property(e => e.CreatedDate)

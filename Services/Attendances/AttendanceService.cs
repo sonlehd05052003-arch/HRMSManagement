@@ -321,30 +321,42 @@ namespace HRManagement.Services.Attendances
 
             // Fetch approved Overtime Requests
             var approvedOts = await _context.OvertimeRequests
-                .Where(or => or.Status == "Approved" && 
+                .AsNoTracking()
+                .Where(or => or.Status == "Approved" &&
                              or.OvertimeDate >= finalFrom && 
                              or.OvertimeDate <= finalTo &&
                              (employeeId == null || or.EmployeeId == employeeId))
                 .ToListAsync();
 
             // Fetch LeaveRequests
-            var leaves = await _context.LeaveRequests
+            // The employee filter is only added when given: "EmployeeId == (employeeId ?? EmployeeId)" kept SQL Server
+            // from using an index on these tables
+            var leaveQuery = _context.LeaveRequests
+                .AsNoTracking()
                 .Include(lr => lr.LeaveType)
                 .Include(lr => lr.Employee)
-                .Where(lr => lr.EmployeeId == (employeeId ?? lr.EmployeeId) &&
-                             lr.Status == "Approved" &&
+                .Where(lr => lr.Status == "Approved" &&
                              lr.StartDate <= finalTo &&
-                             lr.EndDate >= finalFrom)
-                .ToListAsync();
+                             lr.EndDate >= finalFrom);
+            if (employeeId.HasValue)
+                leaveQuery = leaveQuery.Where(lr => lr.EmployeeId == employeeId.Value);
+            var leaves = await leaveQuery.ToListAsync();
 
             // Fetch Assignments
-            var assignments = await _context.ShiftAssignments
+            var assignmentQuery = _context.ShiftAssignments
+                .AsNoTracking()
                 .Include(sa => sa.Shift)
-                .Where(sa => sa.EmployeeId == (employeeId ?? sa.EmployeeId) &&
-                             sa.Status == "Active" &&
+                .Where(sa => sa.Status == "Active" &&
                              sa.AssignmentDate >= finalFrom &&
-                             sa.AssignmentDate <= finalTo)
-                .ToListAsync();
+                             sa.AssignmentDate <= finalTo);
+            if (employeeId.HasValue)
+                assignmentQuery = assignmentQuery.Where(sa => sa.EmployeeId == employeeId.Value);
+            var assignments = await assignmentQuery.ToListAsync();
+
+            // A whole company over a quarter is tens of thousands of assignments; look them up by key, not by scanning
+            var assignmentByDay = assignments
+                .GroupBy(a => (a.EmployeeId, a.AssignmentDate))
+                .ToDictionary(g => g.Key, g => g.First());
 
             // 1. Map Leave Requests
             foreach (var leave in leaves)
@@ -360,8 +372,8 @@ namespace HRManagement.Services.Attendances
                         attendanceMap[key].Status == "Absent" || 
                         attendanceMap[key].Status == "Vắng mặt")
                     {
-                        var assignment = assignments.FirstOrDefault(a => a.EmployeeId == leave.EmployeeId && a.AssignmentDate == date);
-                        
+                        assignmentByDay.TryGetValue((leave.EmployeeId, date), out var assignment);
+
                         var leaveRecord = new AttendanceResponseDto
                         {
                             AttendanceId = 0,
@@ -463,11 +475,14 @@ namespace HRManagement.Services.Attendances
                 .Select(r => new { r.PeriodId, r.EmployeeId })
                 .ToListAsync();
 
+            // Records × payroll rows grows fast for a whole company, so check membership in a set
+            var approvedSet = approvedPairs.Select(e => (e.PeriodId, e.EmployeeId)).ToHashSet();
+
             foreach (var rec in records.Where(r => r.IsLocked != true))
             {
                 var inApproved = approvedPeriods.Any(p =>
                     p.StartDate <= rec.AttendanceDate && p.EndDate >= rec.AttendanceDate &&
-                    approvedPairs.Any(e => e.PeriodId == p.PeriodId && e.EmployeeId == rec.EmployeeId));
+                    approvedSet.Contains((p.PeriodId, rec.EmployeeId)));
                 if (inApproved) rec.IsLocked = true;
             }
         }

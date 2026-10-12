@@ -43,7 +43,9 @@ namespace HRManagement.DataAcess.Implementations
 
         public async Task<List<AttendanceRecord>> SearchAttendanceAsync(DateOnly? fromDate, DateOnly? toDate, int? employeeId, string? status)
         {
+            // Read-only: the search maps these to DTOs, so tracking tens of thousands of rows is wasted work
             var query = _context.AttendanceRecords
+                .AsNoTracking()
                 .Include(a => a.Employee)
                 .Include(a => a.ExplanationLeaveType)
                 .Include(a => a.Shift)
@@ -61,10 +63,8 @@ namespace HRManagement.DataAcess.Implementations
             if (!string.IsNullOrWhiteSpace(status))
                 query = query.Where(a => a.Status == status);
 
-            return await query
-                .OrderByDescending(a => a.AttendanceDate)
-                .ThenBy(a => a.Employee.FullName)
-                .ToListAsync();
+            // No ORDER BY: the only caller merges these with leave and absence rows and sorts the result itself
+            return await query.ToListAsync();
         }
 
         public async System.Threading.Tasks.Task AddAttendanceAsync(AttendanceRecord attendance)

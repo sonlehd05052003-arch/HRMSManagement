@@ -240,15 +240,13 @@ namespace HRManagement.Migrations
                     b.HasKey("AttendanceId")
                         .HasName("PK__Attendan__8B69263C44FB91E1");
 
-                    b.HasIndex("CompanyId");
-
                     b.HasIndex("ExplanationLeaveTypeId");
 
                     b.HasIndex("ShiftId");
 
-                    b.HasIndex(new[] { "AttendanceDate" }, "IX_Attendance_Date");
+                    b.HasIndex(new[] { "CompanyId", "AttendanceDate" }, "IX_AttendanceRecords_Company_Date");
 
-                    b.HasIndex(new[] { "EmployeeId", "AttendanceDate" }, "IX_Attendance_EmployeeDate");
+                    b.HasIndex(new[] { "AttendanceDate" }, "IX_Attendance_Date");
 
                     b.HasIndex(new[] { "EmployeeId", "AttendanceDate" }, "UQ_Attendance_EmployeeDate")
                         .IsUnique();
@@ -2208,11 +2206,11 @@ namespace HRManagement.Migrations
                     b.HasKey("AssignmentId")
                         .HasName("PK__ShiftAss__32499E573BC5AE0C");
 
-                    b.HasIndex("CompanyId");
-
-                    b.HasIndex("EmployeeId");
-
                     b.HasIndex("ShiftId");
+
+                    b.HasIndex(new[] { "CompanyId", "AssignmentDate" }, "IX_ShiftAssignments_Company_Date");
+
+                    b.HasIndex(new[] { "EmployeeId", "AssignmentDate" }, "IX_ShiftAssignments_Employee_Date");
 
                     b.ToTable("ShiftAssignments");
                 });
