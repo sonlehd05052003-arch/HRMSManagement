@@ -84,30 +84,16 @@ namespace HRManagement.Controllers
         [RequirePermission("Payroll.Process")]
         public async Task<IActionResult> CalculateAll(int periodId)
         {
-            try
-            {
-                var results = await _payrollService.CalculateForAllEmployeesAsync(periodId);
-                return Ok(results);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var results = await _payrollService.CalculateForAllEmployeesAsync(periodId);
+            return Ok(results);
         }
 
         [HttpPut("lock-approved-attendance")]
         [RequirePermission("Payroll.Approve")]
         public async Task<IActionResult> LockApprovedAttendance()
         {
-            try
-            {
-                var count = await _payrollService.LockAttendanceForAllApprovedPeriodsAsync();
-                return Ok(new { message = $"Đã khóa {count} bản ghi chấm công thuộc các kỳ lương đã phê duyệt." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            var count = await _payrollService.LockAttendanceForAllApprovedPeriodsAsync();
+            return Ok(new { message = $"Đã khóa {count} bản ghi chấm công thuộc các kỳ lương đã phê duyệt." });
         }
 
         [HttpPut("periods/{periodId:int}/reject")]
@@ -137,18 +123,11 @@ namespace HRManagement.Controllers
         [RequirePermission("Payroll.Approve")]
         public async Task<IActionResult> ApprovePeriod(int periodId)
         {
-            try
-            {
-                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
 
-                var period = await _payrollService.ApprovePeriodAsync(periodId, userId);
-                return Ok(period);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var period = await _payrollService.ApprovePeriodAsync(periodId, userId);
+            return Ok(period);
         }
 
         // ══════════════════════════════════════════════
@@ -200,30 +179,16 @@ namespace HRManagement.Controllers
         [RequirePermission("Payroll.Process")]
         public async Task<IActionResult> CalculateForEmployee(int periodId, int employeeId)
         {
-            try
-            {
-                var record = await _payrollService.CalculateForEmployeeAsync(employeeId, periodId);
-                return Ok(record);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var record = await _payrollService.CalculateForEmployeeAsync(employeeId, periodId);
+            return Ok(record);
         }
 
         [HttpPut("records/{recordId:int}/bonus")]
         [RequirePermission("Payroll.Process")]
         public async Task<IActionResult> UpdateBonus(int recordId, [FromBody] decimal bonusAmount)
         {
-            try
-            {
-                var record = await _payrollService.UpdateBonusAsync(recordId, bonusAmount);
-                return Ok(record);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var record = await _payrollService.UpdateBonusAsync(recordId, bonusAmount);
+            return Ok(record);
         }
 
         [HttpPost("records/{recordId:int}/allowance")]
@@ -231,30 +196,16 @@ namespace HRManagement.Controllers
         public async Task<IActionResult> AddAllowance(int recordId, [FromBody] CreatePayrollAllowanceDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            try
-            {
-                var record = await _payrollService.AddAllowanceAsync(recordId, dto);
-                return Ok(record);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var record = await _payrollService.AddAllowanceAsync(recordId, dto);
+            return Ok(record);
         }
 
         [HttpDelete("records/{recordId:int}/allowance/{allowanceId:int}")]
         [RequirePermission("Payroll.Process")]
         public async Task<IActionResult> RemoveAllowance(int recordId, int allowanceId)
         {
-            try
-            {
-                var record = await _payrollService.RemoveAllowanceAsync(recordId, allowanceId);
-                return Ok(record);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var record = await _payrollService.RemoveAllowanceAsync(recordId, allowanceId);
+            return Ok(record);
         }
 
         [HttpPost("records/{recordId:int}/deduction")]
@@ -262,30 +213,16 @@ namespace HRManagement.Controllers
         public async Task<IActionResult> AddDeduction(int recordId, [FromBody] CreatePayrollDeductionDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            try
-            {
-                var record = await _payrollService.AddDeductionAsync(recordId, dto);
-                return Ok(record);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var record = await _payrollService.AddDeductionAsync(recordId, dto);
+            return Ok(record);
         }
 
         [HttpDelete("records/{recordId:int}/deduction/{deductionId:int}")]
         [RequirePermission("Payroll.Process")]
         public async Task<IActionResult> RemoveDeduction(int recordId, int deductionId)
         {
-            try
-            {
-                var record = await _payrollService.RemoveDeductionAsync(recordId, deductionId);
-                return Ok(record);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var record = await _payrollService.RemoveDeductionAsync(recordId, deductionId);
+            return Ok(record);
         }
 
         // ══════════════════════════════════════════════
@@ -296,27 +233,16 @@ namespace HRManagement.Controllers
         [RequirePermission("Payroll.Process")]
         public async Task<IActionResult> GeneratePayslipsForPeriod(int periodId)
         {
-            try
-            {
-                var count = await _payrollService.GeneratePayslipsForPeriodAsync(periodId);
-                return Ok(new { message = $"Đã tạo {count} phiếu lương.", count });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var count = await _payrollService.GeneratePayslipsForPeriodAsync(periodId);
+            return Ok(new { message = $"Đã tạo {count} phiếu lương.", count });
         }
 
         [HttpPost("payslips/{recordId:int}/generate")]
         [RequirePermission("Payroll.Process")]
         public async Task<IActionResult> GeneratePayslip(int recordId)
         {
-            try {
-                var payslip = await _payrollService.GeneratePayslipAsync(recordId);
-                return Ok(payslip);
-            } catch (Exception ex) {
-                return BadRequest(new { message = ex.Message });
-            }
+            var payslip = await _payrollService.GeneratePayslipAsync(recordId);
+            return Ok(payslip);
         }
 
         [HttpGet("payslips/employee/{employeeId:int}")]
@@ -329,17 +255,13 @@ namespace HRManagement.Controllers
         [HttpGet("payslips/{payslipId:int}/pdf")]
         public async Task<IActionResult> DownloadPdf(int payslipId)
         {
-            try {
-                var pdfBytes = await _payrollService.GetPayslipPdfAsync(payslipId);
-                
-                if (pdfBytes == null || pdfBytes.Length == 0)
-                {
-                    return BadRequest(new { message = "Không thể tạo PDF" });
-                }
-                return File(pdfBytes, "application/pdf", $"payslip_{payslipId}.pdf");
-            } catch (Exception ex) {
-                return NotFound(new { message = ex.Message });
+            var pdfBytes = await _payrollService.GetPayslipPdfAsync(payslipId);
+
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                return BadRequest(new { message = "Không thể tạo PDF" });
             }
+            return File(pdfBytes, "application/pdf", $"payslip_{payslipId}.pdf");
         }
 
         // ══════════════════════════════════════════════
@@ -350,12 +272,8 @@ namespace HRManagement.Controllers
         [RequirePermission("Payroll.Process")]
         public async Task<IActionResult> ExportExcel(int periodId)
         {
-            try {
-                var excelBytes = await _payrollService.ExportPayrollExcelAsync(periodId);
-                return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Payroll_Period_{periodId}.xlsx");
-            } catch (Exception ex) {
-                return BadRequest(new { message = ex.Message });
-            }
+            var excelBytes = await _payrollService.ExportPayrollExcelAsync(periodId);
+            return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Payroll_Period_{periodId}.xlsx");
         }
 
         [HttpPost("tax/calculate")]
@@ -375,15 +293,8 @@ namespace HRManagement.Controllers
         [RequirePermission("Payroll.Process", "Payroll.Approve")]
         public async Task<IActionResult> TriggerAttendanceReview(int periodId)
         {
-            try
-            {
-                var period = await _payrollService.TriggerAttendanceReviewAsync(periodId);
-                return Ok(period);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var period = await _payrollService.TriggerAttendanceReviewAsync(periodId);
+            return Ok(period);
         }
 
         /// <summary>NV xem bảng chấm công của mình trong kỳ (AttendanceReview)</summary>
@@ -399,7 +310,6 @@ namespace HRManagement.Controllers
                 return Ok(summary);
             }
             catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-            catch (Exception ex)            { return BadRequest(new { message = ex.Message }); }
         }
 
         /// <summary>Danh sách kỳ lương của NV hiện tại</summary>
@@ -407,18 +317,11 @@ namespace HRManagement.Controllers
         [Authorize]
         public async Task<IActionResult> GetMyPeriods()
         {
-            try
-            {
-                var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
 
-                var periods = await _payrollService.GetPeriodsForEmployeeAsync(userId);
-                return Ok(periods);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var periods = await _payrollService.GetPeriodsForEmployeeAsync(userId);
+            return Ok(periods);
         }
     }
 }

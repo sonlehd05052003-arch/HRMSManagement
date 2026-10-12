@@ -75,13 +75,6 @@ namespace HRManagement.Controllers
                 }
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                var inner = ex.InnerException?.InnerException?.Message
-                         ?? ex.InnerException?.Message
-                         ?? ex.Message;
-                return StatusCode(500, new { message = "Lỗi hệ thống khi check-in.", detail = inner });
-            }
         }
 
         private async Task ValidateLocationAsync(CheckInRequestDto request)
@@ -148,13 +141,6 @@ namespace HRManagement.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                var inner = ex.InnerException?.InnerException?.Message
-                         ?? ex.InnerException?.Message
-                         ?? ex.Message;
-                return StatusCode(500, new { message = "Lỗi hệ thống khi check-out.", detail = inner });
-            }
         }
 
         [HttpGet("my-today")]
@@ -178,10 +164,6 @@ namespace HRManagement.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
             }
         }
 
@@ -212,10 +194,6 @@ namespace HRManagement.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
         }
 
         // =========================
@@ -234,10 +212,6 @@ namespace HRManagement.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
             }
         }
 
@@ -267,10 +241,6 @@ namespace HRManagement.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
         }
 
         [HttpGet("{employeeId:int}/{date}")]
@@ -292,10 +262,6 @@ namespace HRManagement.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
             }
         }
 
@@ -328,10 +294,6 @@ namespace HRManagement.Controllers
             {
                 return Conflict(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
         }
 
         [HttpPost("manual-create")]
@@ -359,10 +321,6 @@ namespace HRManagement.Controllers
             catch (InvalidOperationException ex)
             {
                 return Conflict(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
             }
         }
 
@@ -396,10 +354,6 @@ namespace HRManagement.Controllers
             {
                 return Conflict(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
         }
 
         [HttpPut("{attendanceId:int}/unlock")]
@@ -432,10 +386,6 @@ namespace HRManagement.Controllers
             {
                 return Conflict(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
         }
 
         [HttpGet("logs")]
@@ -458,64 +408,33 @@ namespace HRManagement.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
         }
 
         [HttpPost("{attendanceId:int}/submit-explanation")]
         [Authorize]
         public async Task<IActionResult> SubmitExplanation(int attendanceId, [FromBody] SubmitExplanationDto dto)
         {
-            try
-            {
-                var employeeId = await _currentUserService.GetCurrentEmployeeIdAsync();
-                var result = await _attendanceService.SubmitExplanationAsync(employeeId, attendanceId, dto);
-                return Ok(new { message = "Đã gửi phiếu giải trình. Đang chờ Quản lý duyệt.", data = result });
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("quyền") || ex.Message.Contains("Không tìm thấy"))
-                    return BadRequest(new { message = ex.Message });
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
+            var employeeId = await _currentUserService.GetCurrentEmployeeIdAsync();
+            var result = await _attendanceService.SubmitExplanationAsync(employeeId, attendanceId, dto);
+            return Ok(new { message = "Đã gửi phiếu giải trình. Đang chờ Quản lý duyệt.", data = result });
         }
 
         [HttpPost("submit-absent-explanation")]
         [Authorize]
         public async Task<IActionResult> SubmitAbsentExplanation([FromBody] SubmitAbsentExplanationDto dto)
         {
-            try
-            {
-                var employeeId = await _currentUserService.GetCurrentEmployeeIdAsync();
-                var result = await _attendanceService.SubmitAbsentExplanationAsync(employeeId, dto.Date, dto);
-                return Ok(new { message = "Đã gửi phiếu giải trình cho ngày vắng mặt. Đang chờ Quản lý duyệt.", data = result });
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("quyền") || ex.Message.Contains("Không tìm thấy") || ex.Message.Contains("ca làm việc"))
-                    return BadRequest(new { message = ex.Message });
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
+            var employeeId = await _currentUserService.GetCurrentEmployeeIdAsync();
+            var result = await _attendanceService.SubmitAbsentExplanationAsync(employeeId, dto.Date, dto);
+            return Ok(new { message = "Đã gửi phiếu giải trình cho ngày vắng mặt. Đang chờ Quản lý duyệt.", data = result });
         }
 
         [HttpPut("{attendanceId:int}/approve-explanation")]
         [Authorize]
         public async Task<IActionResult> ApproveExplanation(int attendanceId, [FromBody] ApproveExplanationDto dto)
         {
-            try
-            {
-                var managerId = _currentUserService.GetCurrentUserId();
-                var result = await _attendanceService.ApproveExplanationAsync(managerId, attendanceId, dto);
-                return Ok(new { message = "Đã xử lý phiếu giải trình.", data = result });
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("Không tìm thấy"))
-                    return BadRequest(new { message = ex.Message });
-                return StatusCode(500, new { message = "Lỗi hệ thống.", detail = ex.Message });
-            }
+            var managerId = _currentUserService.GetCurrentUserId();
+            var result = await _attendanceService.ApproveExplanationAsync(managerId, attendanceId, dto);
+            return Ok(new { message = "Đã xử lý phiếu giải trình.", data = result });
         }
 
         private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)

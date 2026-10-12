@@ -247,6 +247,10 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.AddSingleton<IPermissionCache, PermissionCache>();
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
+// Exceptions that escape a controller become a JSON { message } response (see GlobalExceptionHandler)
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 // Controllers & JSON configuration
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -267,6 +271,7 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 });
 
 var app = builder.Build();
+app.UseExceptionHandler();
 app.UseRouting();
 
 // Middleware Pipeline

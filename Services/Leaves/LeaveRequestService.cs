@@ -27,218 +27,211 @@ namespace HRManagement.Services.Leaves
         }
         public async Task<ServiceResult<LeaveRequestResponseDTO>> CreateLeaveRequestAsync(int userId, CreateLeaveRequestDTO dto)
         {
-            try
+            var user = await _context.Users
+                .Include(u => u.Employee)
+                .FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
+
+            if (user == null || user.Employee == null)
             {
-                var user = await _context.Users
-                    .Include(u => u.Employee)
-                    .FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
+                return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-01", "User or employee not found.");
+            }
 
-                if (user == null || user.Employee == null)
-                {
-                    return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-01", "User or employee not found.");
-                }
+            var employee = user.Employee;
 
-                var employee = user.Employee;
+            // Check employee status
+            if (employee.EmploymentStatus != "Active")
+            {
+                return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-EMP-01", "Employee is not active.");
+            }
 
-                // Check employee status
-                if (employee.EmploymentStatus != "Active")
-                {
-                    return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-EMP-01", "Employee is not active.");
-                }
+            // Check join date
+            if (employee.JoinDate > dto.StartDate)
+            {
+                return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-EMP-02", "Cannot create leave request before join date.");
+            }
 
-                // Check join date
-                if (employee.JoinDate > dto.StartDate)
-                {
-                    return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-EMP-02", "Cannot create leave request before join date.");
-                }
+            if (dto.StartDate > dto.EndDate)
+            {
+                return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-02", "Start date cannot be later than end date.");
+            }
 
-                if (dto.StartDate > dto.EndDate)
-                {
-                    return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-02", "Start date cannot be later than end date.");
-                }
+            if (dto.NumberOfDays <= 0)
+            {
+                return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-03", "Number of days must be greater than 0.");
+            }
 
-                if (dto.NumberOfDays <= 0)
-                {
-                    return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-03", "Number of days must be greater than 0.");
-                }
+            var leaveType = await _context.LeaveTypes
+                .FirstOrDefaultAsync(x => x.LeaveTypeId == dto.LeaveTypeID && x.IsActive);
 
-                var leaveType = await _context.LeaveTypes
-                    .FirstOrDefaultAsync(x => x.LeaveTypeId == dto.LeaveTypeID && x.IsActive);
+            if (leaveType == null)
+            {
+                return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-08", "Invalid leave type.");
+            }
 
-                if (leaveType == null)
-                {
-                    return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-08", "Invalid leave type.");
-                }
+            var overlappingRequest = await _context.LeaveRequests
+                .Where(x =>
+                    x.EmployeeId == employee.EmployeeId &&
+                    (x.Status == "Pending" || x.Status == "Approved") &&
+                    dto.StartDate <= x.EndDate &&
+                    dto.EndDate >= x.StartDate)
+                .Select(x => new { x.StartDate, x.EndDate })
+                .FirstOrDefaultAsync();
 
-                var overlappingRequest = await _context.LeaveRequests
-                    .Where(x =>
+            if (overlappingRequest != null)
+            {
+                return ServiceResult<LeaveRequestResponseDTO>.Fail(
+                    "MSG-09",
+                    $"Selected dates overlap with an existing {overlappingRequest.StartDate:dd/MM/yyyy} to {overlappingRequest.EndDate:dd/MM/yyyy} leave request.");
+            }
+
+            decimal currentBalance = 0;
+            decimal remainingAfterRequest = 0;
+            LeaveBalance leaveBalance = null;
+
+            if (leaveType.AnnualEntitlement > 0)
+            {
+                leaveBalance = await _context.LeaveBalances
+                    .FirstOrDefaultAsync(x =>
                         x.EmployeeId == employee.EmployeeId &&
-                        (x.Status == "Pending" || x.Status == "Approved") &&
-                        dto.StartDate <= x.EndDate &&
-                        dto.EndDate >= x.StartDate)
-                    .Select(x => new { x.StartDate, x.EndDate })
-                    .FirstOrDefaultAsync();
+                        x.LeaveTypeId == dto.LeaveTypeID &&
+                        x.Year == dto.StartDate.Year);
 
-                if (overlappingRequest != null)
+                if (leaveBalance == null)
+                {
+                    // Instead of failing, we'll assume 0 balance and let the user "Submit anyway" if they want
+                    currentBalance = 0;
+                    remainingAfterRequest = -dto.NumberOfDays;
+                }
+                else
+                {
+                    currentBalance = leaveBalance.RemainingDays
+                        ?? leaveBalance.TotalEntitlement - leaveBalance.UsedDays + leaveBalance.CarriedForward;
+
+                    remainingAfterRequest = currentBalance - dto.NumberOfDays;
+                }
+
+                if (currentBalance < dto.NumberOfDays && !dto.SubmitAnyway)
                 {
                     return ServiceResult<LeaveRequestResponseDTO>.Fail(
-                        "MSG-09",
-                        $"Selected dates overlap with an existing {overlappingRequest.StartDate:dd/MM/yyyy} to {overlappingRequest.EndDate:dd/MM/yyyy} leave request.");
+                        "MSG-27",
+                        "Insufficient leave balance.",
+                        new LeaveRequestResponseDTO
+                        {
+                            EmployeeID = employee.EmployeeId,
+                            LeaveTypeID = dto.LeaveTypeID,
+                            LeaveTypeName = leaveType.LeaveTypeName,
+                            StartDate = dto.StartDate,
+                            EndDate = dto.EndDate,
+                            NumberOfDays = dto.NumberOfDays,
+                            Reason = dto.Reason,
+                            CurrentBalance = currentBalance,
+                            RemainingAfterRequest = remainingAfterRequest,
+                            MessageCode = "MSG-27",
+                            Message = "Insufficient leave balance."
+                        });
                 }
-
-                decimal currentBalance = 0;
-                decimal remainingAfterRequest = 0;
-                LeaveBalance leaveBalance = null;
-
-                if (leaveType.AnnualEntitlement > 0)
-                {
-                    leaveBalance = await _context.LeaveBalances
-                        .FirstOrDefaultAsync(x =>
-                            x.EmployeeId == employee.EmployeeId &&
-                            x.LeaveTypeId == dto.LeaveTypeID &&
-                            x.Year == dto.StartDate.Year);
-
-                    if (leaveBalance == null)
-                    {
-                        // Instead of failing, we'll assume 0 balance and let the user "Submit anyway" if they want
-                        currentBalance = 0;
-                        remainingAfterRequest = -dto.NumberOfDays;
-                    }
-                    else
-                    {
-                        currentBalance = leaveBalance.RemainingDays
-                            ?? leaveBalance.TotalEntitlement - leaveBalance.UsedDays + leaveBalance.CarriedForward;
-
-                        remainingAfterRequest = currentBalance - dto.NumberOfDays;
-                    }
-
-                    if (currentBalance < dto.NumberOfDays && !dto.SubmitAnyway)
-                    {
-                        return ServiceResult<LeaveRequestResponseDTO>.Fail(
-                            "MSG-27",
-                            "Insufficient leave balance.",
-                            new LeaveRequestResponseDTO
-                            {
-                                EmployeeID = employee.EmployeeId,
-                                LeaveTypeID = dto.LeaveTypeID,
-                                LeaveTypeName = leaveType.LeaveTypeName,
-                                StartDate = dto.StartDate,
-                                EndDate = dto.EndDate,
-                                NumberOfDays = dto.NumberOfDays,
-                                Reason = dto.Reason,
-                                CurrentBalance = currentBalance,
-                                RemainingAfterRequest = remainingAfterRequest,
-                                MessageCode = "MSG-27",
-                                Message = "Insufficient leave balance."
-                            });
-                    }
-                }
-
-                var authResult = await _approvalRouteService.CanSubmitRequestAsync(employee.EmployeeId);
-                if (!authResult.IsAuthorized)
-                {
-                    return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-41", authResult.Message ?? "Invalid approval route.");
-                }
-
-                var approverId = await _approvalRouteService.GetApproverIdAsync(employee.EmployeeId);
-                string initialStatus = approverId.HasValue ? "Pending" : "Approved";
-
-                var leaveRequest = new LeaveRequest
-                {
-                    RequestNumber = await GenerateRequestNumberAsync(),
-                    EmployeeId = employee.EmployeeId,
-                    LeaveTypeId = dto.LeaveTypeID,
-                    StartDate = dto.StartDate,
-                    EndDate = dto.EndDate,
-                    NumberOfDays = dto.NumberOfDays,
-                    Reason = dto.Reason,
-                    Status = initialStatus,
-                    TargetApproverId = approverId,
-                    SubmittedDate = DateTime.Now,
-                    ReviewedDate = initialStatus == "Approved" ? DateTime.Now : null,
-                    ReviewedBy = initialStatus == "Approved" ? null : null, // System approved
-                    ReviewerComments = initialStatus == "Approved" ? "Auto-approved by system (Top-level no fallback)" : null,
-                    ApprovedDate = initialStatus == "Approved" ? DateTime.Now : null,
-                    ApprovedBy = null // System
-                };
-
-                _context.LeaveRequests.Add(leaveRequest);
-
-                if (approverId.HasValue)
-                {
-                    var notification = new Notification
-                    {
-                        RecipientUserId = approverId.Value,
-                        NotificationType = "Leave",
-                        Title = "New Leave Request Submitted",
-                        Message = $"A new leave request {leaveRequest.RequestNumber} is waiting for approval.",
-                        RelatedEntity = "LeaveRequest",
-                        RelatedEntityId = leaveRequest.LeaveRequestId,
-                        IsRead = false,
-                        SentDate = DateTime.Now
-                    };
-                    _context.Notifications.Add(notification);
-                }
-
-                // If approved by system, we must deduct balance immediately
-                if (initialStatus == "Approved" && leaveBalance != null)
-                {
-                    leaveBalance.UsedDays += dto.NumberOfDays;
-                    leaveBalance.RemainingDays = (leaveBalance.TotalEntitlement + leaveBalance.CarriedForward) - leaveBalance.UsedDays;
-                    leaveBalance.LastUpdated = DateTime.Now;
-                }
-
-                await _context.SaveChangesAsync();
-
-                var auditLog = new AuditLog
-                {
-                    TableName = "LeaveRequests",
-                    Action = "INSERT",
-                    RecordId = leaveRequest.LeaveRequestId,
-                    UserId = userId,
-                    NewValues = JsonSerializer.Serialize(new
-                    {
-                        leaveRequest.LeaveRequestId,
-                        leaveRequest.RequestNumber,
-                        leaveRequest.EmployeeId,
-                        leaveRequest.LeaveTypeId,
-                        leaveRequest.StartDate,
-                        leaveRequest.EndDate,
-                        leaveRequest.NumberOfDays,
-                        leaveRequest.Reason,
-                        leaveRequest.Status
-                    }),
-                    ActionDate = DateTime.Now
-                };
-
-                _context.AuditLogs.Add(auditLog);
-                await _context.SaveChangesAsync();
-
-                var response = new LeaveRequestResponseDTO
-                {
-                    LeaveRequestID = leaveRequest.LeaveRequestId,
-                    RequestNumber = leaveRequest.RequestNumber,
-                    EmployeeID = leaveRequest.EmployeeId,
-                    LeaveTypeID = leaveRequest.LeaveTypeId,
-                    LeaveTypeName = leaveType.LeaveTypeName,
-                    StartDate = leaveRequest.StartDate,
-                    EndDate = leaveRequest.EndDate,
-                    NumberOfDays = leaveRequest.NumberOfDays,
-                    Reason = leaveRequest.Reason,
-                    Status = leaveRequest.Status,
-                    SubmittedDate = leaveRequest.SubmittedDate,
-                    CurrentBalance = currentBalance,
-                    RemainingAfterRequest = remainingAfterRequest,
-                    MessageCode = "MSG-22",
-                    Message = "Leave request submitted successfully."
-                };
-
-                return ServiceResult<LeaveRequestResponseDTO>.Ok("MSG-22", "Leave request submitted successfully.", response);
             }
-            catch (Exception ex)
+
+            var authResult = await _approvalRouteService.CanSubmitRequestAsync(employee.EmployeeId);
+            if (!authResult.IsAuthorized)
             {
-                return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-500", $"An error occurred: {ex.Message}");
+                return ServiceResult<LeaveRequestResponseDTO>.Fail("MSG-41", authResult.Message ?? "Invalid approval route.");
             }
+
+            var approverId = await _approvalRouteService.GetApproverIdAsync(employee.EmployeeId);
+            string initialStatus = approverId.HasValue ? "Pending" : "Approved";
+
+            var leaveRequest = new LeaveRequest
+            {
+                RequestNumber = await GenerateRequestNumberAsync(),
+                EmployeeId = employee.EmployeeId,
+                LeaveTypeId = dto.LeaveTypeID,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
+                NumberOfDays = dto.NumberOfDays,
+                Reason = dto.Reason,
+                Status = initialStatus,
+                TargetApproverId = approverId,
+                SubmittedDate = DateTime.Now,
+                ReviewedDate = initialStatus == "Approved" ? DateTime.Now : null,
+                ReviewedBy = initialStatus == "Approved" ? null : null, // System approved
+                ReviewerComments = initialStatus == "Approved" ? "Auto-approved by system (Top-level no fallback)" : null,
+                ApprovedDate = initialStatus == "Approved" ? DateTime.Now : null,
+                ApprovedBy = null // System
+            };
+
+            _context.LeaveRequests.Add(leaveRequest);
+
+            if (approverId.HasValue)
+            {
+                var notification = new Notification
+                {
+                    RecipientUserId = approverId.Value,
+                    NotificationType = "Leave",
+                    Title = "New Leave Request Submitted",
+                    Message = $"A new leave request {leaveRequest.RequestNumber} is waiting for approval.",
+                    RelatedEntity = "LeaveRequest",
+                    RelatedEntityId = leaveRequest.LeaveRequestId,
+                    IsRead = false,
+                    SentDate = DateTime.Now
+                };
+                _context.Notifications.Add(notification);
+            }
+
+            // If approved by system, we must deduct balance immediately
+            if (initialStatus == "Approved" && leaveBalance != null)
+            {
+                leaveBalance.UsedDays += dto.NumberOfDays;
+                leaveBalance.RemainingDays = (leaveBalance.TotalEntitlement + leaveBalance.CarriedForward) - leaveBalance.UsedDays;
+                leaveBalance.LastUpdated = DateTime.Now;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var auditLog = new AuditLog
+            {
+                TableName = "LeaveRequests",
+                Action = "INSERT",
+                RecordId = leaveRequest.LeaveRequestId,
+                UserId = userId,
+                NewValues = JsonSerializer.Serialize(new
+                {
+                    leaveRequest.LeaveRequestId,
+                    leaveRequest.RequestNumber,
+                    leaveRequest.EmployeeId,
+                    leaveRequest.LeaveTypeId,
+                    leaveRequest.StartDate,
+                    leaveRequest.EndDate,
+                    leaveRequest.NumberOfDays,
+                    leaveRequest.Reason,
+                    leaveRequest.Status
+                }),
+                ActionDate = DateTime.Now
+            };
+
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+
+            var response = new LeaveRequestResponseDTO
+            {
+                LeaveRequestID = leaveRequest.LeaveRequestId,
+                RequestNumber = leaveRequest.RequestNumber,
+                EmployeeID = leaveRequest.EmployeeId,
+                LeaveTypeID = leaveRequest.LeaveTypeId,
+                LeaveTypeName = leaveType.LeaveTypeName,
+                StartDate = leaveRequest.StartDate,
+                EndDate = leaveRequest.EndDate,
+                NumberOfDays = leaveRequest.NumberOfDays,
+                Reason = leaveRequest.Reason,
+                Status = leaveRequest.Status,
+                SubmittedDate = leaveRequest.SubmittedDate,
+                CurrentBalance = currentBalance,
+                RemainingAfterRequest = remainingAfterRequest,
+                MessageCode = "MSG-22",
+                Message = "Leave request submitted successfully."
+            };
+
+            return ServiceResult<LeaveRequestResponseDTO>.Ok("MSG-22", "Leave request submitted successfully.", response);
         }
 
         private async Task<string> GenerateRequestNumberAsync()
@@ -254,323 +247,302 @@ namespace HRManagement.Services.Leaves
         public async Task<ServiceResult<string>> ApproveLeaveRequestAsync(int managerUserId,int leaveRequestId,
     ApproveLeaveRequestDTO dto)
         {
-            try
+            var managerUser = await _context.Users
+                .FirstOrDefaultAsync(x => x.UserId == managerUserId && x.IsActive);
+
+            if (managerUser == null)
             {
-                var managerUser = await _context.Users
-                    .FirstOrDefaultAsync(x => x.UserId == managerUserId && x.IsActive);
+                return ServiceResult<string>.Fail("MSG-41", "You do not have authority to process this request.");
+            }
 
-                if (managerUser == null)
+            var leaveRequest = await _context.LeaveRequests
+                .FirstOrDefaultAsync(x => x.LeaveRequestId == leaveRequestId);
+
+            if (leaveRequest == null)
+            {
+                return ServiceResult<string>.Fail("MSG-44", "Leave request not found.");
+            }
+
+            if (leaveRequest.Status != "Pending")
+            {
+                return ServiceResult<string>.Fail("MSG-42", "This request has already been processed.");
+            }
+
+            var employee = await _context.Employees
+                .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId);
+
+            if (employee == null)
+            {
+                return ServiceResult<string>.Fail("MSG-45", "Employee not found.");
+            }
+
+            // Validation using frozen TargetApproverId
+            if (leaveRequest.TargetApproverId == null || leaveRequest.TargetApproverId != managerUserId)
+            {
+                return ServiceResult<string>.Fail("MSG-41", "You do not have authority to process this request.");
+            }
+
+            var leaveType = await _context.LeaveTypes
+                .FirstOrDefaultAsync(x => x.LeaveTypeId == leaveRequest.LeaveTypeId && x.IsActive);
+
+            if (leaveType == null)
+            {
+                return ServiceResult<string>.Fail("MSG-08", "Invalid leave type.");
+            }
+            LeaveBalance leaveBalance = null;
+
+            if (leaveType.AnnualEntitlement > 0)
+            {
+                int targetYear = leaveRequest.StartDate.Year;
+
+                leaveBalance = await _context.LeaveBalances
+                    .FirstOrDefaultAsync(x =>
+                        x.EmployeeId == leaveRequest.EmployeeId &&
+                        x.LeaveTypeId == leaveRequest.LeaveTypeId &&
+                        x.Year == targetYear);
+
+                if (leaveBalance == null)
                 {
-                    return ServiceResult<string>.Fail("MSG-41", "You do not have authority to process this request.");
-                }
-
-                var leaveRequest = await _context.LeaveRequests
-                    .FirstOrDefaultAsync(x => x.LeaveRequestId == leaveRequestId);
-
-                if (leaveRequest == null)
-                {
-                    return ServiceResult<string>.Fail("MSG-44", "Leave request not found.");
-                }
-
-                if (leaveRequest.Status != "Pending")
-                {
-                    return ServiceResult<string>.Fail("MSG-42", "This request has already been processed.");
-                }
-
-                var employee = await _context.Employees
-                    .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId);
-
-                if (employee == null)
-                {
-                    return ServiceResult<string>.Fail("MSG-45", "Employee not found.");
-                }
-
-                // Validation using frozen TargetApproverId
-                if (leaveRequest.TargetApproverId == null || leaveRequest.TargetApproverId != managerUserId)
-                {
-                    return ServiceResult<string>.Fail("MSG-41", "You do not have authority to process this request.");
-                }
-
-                var leaveType = await _context.LeaveTypes
-                    .FirstOrDefaultAsync(x => x.LeaveTypeId == leaveRequest.LeaveTypeId && x.IsActive);
-
-                if (leaveType == null)
-                {
-                    return ServiceResult<string>.Fail("MSG-08", "Invalid leave type.");
-                }
-                LeaveBalance leaveBalance = null;
-
-                if (leaveType.AnnualEntitlement > 0)
-                {
-                    int targetYear = leaveRequest.StartDate.Year;
-
-                    leaveBalance = await _context.LeaveBalances
-                        .FirstOrDefaultAsync(x =>
-                            x.EmployeeId == leaveRequest.EmployeeId &&
-                            x.LeaveTypeId == leaveRequest.LeaveTypeId &&
-                            x.Year == targetYear);
-
-                    if (leaveBalance == null)
+                    // Create a default balance if it doesn't exist to track the usage
+                    leaveBalance = new LeaveBalance
                     {
-                        // Create a default balance if it doesn't exist to track the usage
-                        leaveBalance = new LeaveBalance
-                        {
-                            EmployeeId = leaveRequest.EmployeeId,
-                            LeaveTypeId = leaveRequest.LeaveTypeId,
-                            Year = targetYear,
-                            TotalEntitlement = leaveType.AnnualEntitlement,
-                            UsedDays = 0,
-                            CarriedForward = 0,
-                            RemainingDays = leaveType.AnnualEntitlement,
-                            LastUpdated = DateTime.Now
-                        };
-                        _context.LeaveBalances.Add(leaveBalance);
-                    }
-
-                    decimal currentBalance = leaveBalance.RemainingDays
-                        ?? leaveBalance.TotalEntitlement - leaveBalance.UsedDays + leaveBalance.CarriedForward;
-
-                    decimal newBalance = currentBalance - leaveRequest.NumberOfDays;
-
-                    // Allow negative balance, but log it or handle it in Salary calculation later
-                    leaveBalance.UsedDays += leaveRequest.NumberOfDays;
-                    leaveBalance.RemainingDays = (leaveBalance.TotalEntitlement + leaveBalance.CarriedForward) - leaveBalance.UsedDays;
-                    leaveBalance.LastUpdated = DateTime.Now;
-                }
-
-                leaveRequest.Status = "Approved";
-                leaveRequest.ApprovedDate = DateTime.Now;
-                leaveRequest.ApprovedBy = managerUserId;
-                leaveRequest.ReviewedDate = DateTime.Now;
-                leaveRequest.ReviewedBy = managerUserId;
-                leaveRequest.ReviewerComments = dto.Comments;
-                leaveRequest.RejectionReason = null;
-
-                var employeeUser = await _context.Users
-                    .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId && x.IsActive);
-
-                if (employeeUser != null)
-                {
-                    var notification = new Notification
-                    {
-                        RecipientUserId = employeeUser.UserId,
-                        NotificationType = "Leave",
-                        Title = "Leave Request Approved",
-                        Message = $"Your leave request {leaveRequest.RequestNumber} has been approved.",
-                        RelatedEntity = "LeaveRequest",
-                        RelatedEntityId = leaveRequest.LeaveRequestId,
-                        IsRead = false,
-                        SentDate = DateTime.Now
+                        EmployeeId = leaveRequest.EmployeeId,
+                        LeaveTypeId = leaveRequest.LeaveTypeId,
+                        Year = targetYear,
+                        TotalEntitlement = leaveType.AnnualEntitlement,
+                        UsedDays = 0,
+                        CarriedForward = 0,
+                        RemainingDays = leaveType.AnnualEntitlement,
+                        LastUpdated = DateTime.Now
                     };
-
-                    _context.Notifications.Add(notification);
+                    _context.LeaveBalances.Add(leaveBalance);
                 }
 
-                var auditLog = new AuditLog
+                decimal currentBalance = leaveBalance.RemainingDays
+                    ?? leaveBalance.TotalEntitlement - leaveBalance.UsedDays + leaveBalance.CarriedForward;
+
+                decimal newBalance = currentBalance - leaveRequest.NumberOfDays;
+
+                // Allow negative balance, but log it or handle it in Salary calculation later
+                leaveBalance.UsedDays += leaveRequest.NumberOfDays;
+                leaveBalance.RemainingDays = (leaveBalance.TotalEntitlement + leaveBalance.CarriedForward) - leaveBalance.UsedDays;
+                leaveBalance.LastUpdated = DateTime.Now;
+            }
+
+            leaveRequest.Status = "Approved";
+            leaveRequest.ApprovedDate = DateTime.Now;
+            leaveRequest.ApprovedBy = managerUserId;
+            leaveRequest.ReviewedDate = DateTime.Now;
+            leaveRequest.ReviewedBy = managerUserId;
+            leaveRequest.ReviewerComments = dto.Comments;
+            leaveRequest.RejectionReason = null;
+
+            var employeeUser = await _context.Users
+                .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId && x.IsActive);
+
+            if (employeeUser != null)
+            {
+                var notification = new Notification
                 {
-                    TableName = "LeaveRequests",
-                    Action = "UPDATE",
-                    RecordId = leaveRequest.LeaveRequestId,
-                    UserId = managerUserId,
-                    NewValues = JsonSerializer.Serialize(new
-                    {
-                        leaveRequest.LeaveRequestId,
-                        leaveRequest.Status,
-                        leaveRequest.ApprovedDate,
-                        leaveRequest.ApprovedBy,
-                        leaveRequest.ReviewedDate,
-                        leaveRequest.ReviewedBy,
-                        leaveRequest.ReviewerComments,
-                        UpdatedLeaveBalanceUsedDays = leaveBalance?.UsedDays
-                    }),
-                    ActionDate = DateTime.Now
+                    RecipientUserId = employeeUser.UserId,
+                    NotificationType = "Leave",
+                    Title = "Leave Request Approved",
+                    Message = $"Your leave request {leaveRequest.RequestNumber} has been approved.",
+                    RelatedEntity = "LeaveRequest",
+                    RelatedEntityId = leaveRequest.LeaveRequestId,
+                    IsRead = false,
+                    SentDate = DateTime.Now
                 };
 
-                _context.AuditLogs.Add(auditLog);
-
-                await _context.SaveChangesAsync();
-
-                return ServiceResult<string>.Ok("MSG-40", "Request approved successfully.", null);
+                _context.Notifications.Add(notification);
             }
-            catch (Exception ex)
+
+            var auditLog = new AuditLog
             {
-                return ServiceResult<string>.Fail("MSG-500", $"An error occurred: {ex.Message}");
-            }
+                TableName = "LeaveRequests",
+                Action = "UPDATE",
+                RecordId = leaveRequest.LeaveRequestId,
+                UserId = managerUserId,
+                NewValues = JsonSerializer.Serialize(new
+                {
+                    leaveRequest.LeaveRequestId,
+                    leaveRequest.Status,
+                    leaveRequest.ApprovedDate,
+                    leaveRequest.ApprovedBy,
+                    leaveRequest.ReviewedDate,
+                    leaveRequest.ReviewedBy,
+                    leaveRequest.ReviewerComments,
+                    UpdatedLeaveBalanceUsedDays = leaveBalance?.UsedDays
+                }),
+                ActionDate = DateTime.Now
+            };
+
+            _context.AuditLogs.Add(auditLog);
+
+            await _context.SaveChangesAsync();
+
+            return ServiceResult<string>.Ok("MSG-40", "Request approved successfully.", null);
         }
         public async Task<ServiceResult<string>> RejectLeaveRequestAsync(
     int managerUserId,
     int leaveRequestId,
     RejectLeaveRequestDTO dto)
         {
-            try
+            var managerUser = await _context.Users
+                .FirstOrDefaultAsync(x => x.UserId == managerUserId && x.IsActive);
+
+            if (managerUser == null)
             {
-                var managerUser = await _context.Users
-                    .FirstOrDefaultAsync(x => x.UserId == managerUserId && x.IsActive);
+                return ServiceResult<string>.Fail("MSG-41", "You do not have authority to process this request.");
+            }
 
-                if (managerUser == null)
+            var leaveRequest = await _context.LeaveRequests
+                .FirstOrDefaultAsync(x => x.LeaveRequestId == leaveRequestId);
+
+            if (leaveRequest == null)
+            {
+                return ServiceResult<string>.Fail("MSG-44", "Leave request not found.");
+            }
+
+            if (leaveRequest.Status != "Pending")
+            {
+                return ServiceResult<string>.Fail("MSG-42", "This request has already been processed.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.RejectionReason))
+            {
+                return ServiceResult<string>.Fail("MSG-45", "Please provide a reason for rejection.");
+            }
+
+            var employee = await _context.Employees
+                .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId);
+
+            if (employee == null)
+            {
+                return ServiceResult<string>.Fail("MSG-46", "Employee not found.");
+            }
+
+            // Validation using frozen TargetApproverId
+            if (leaveRequest.TargetApproverId == null || leaveRequest.TargetApproverId != managerUserId)
+            {
+                return ServiceResult<string>.Fail("MSG-41", "You do not have authority to process this request.");
+            }
+
+            leaveRequest.Status = "Rejected";
+            leaveRequest.RejectionReason = dto.RejectionReason;
+            leaveRequest.ReviewedDate = DateTime.Now;
+            leaveRequest.ReviewedBy = managerUserId;
+            leaveRequest.ReviewerComments = dto.RejectionReason;
+            leaveRequest.ApprovedDate = null;
+            leaveRequest.ApprovedBy = null;
+
+            var employeeUser = await _context.Users
+                .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId && x.IsActive);
+
+            if (employeeUser != null)
+            {
+                var notification = new Notification
                 {
-                    return ServiceResult<string>.Fail("MSG-41", "You do not have authority to process this request.");
-                }
-
-                var leaveRequest = await _context.LeaveRequests
-                    .FirstOrDefaultAsync(x => x.LeaveRequestId == leaveRequestId);
-
-                if (leaveRequest == null)
-                {
-                    return ServiceResult<string>.Fail("MSG-44", "Leave request not found.");
-                }
-
-                if (leaveRequest.Status != "Pending")
-                {
-                    return ServiceResult<string>.Fail("MSG-42", "This request has already been processed.");
-                }
-
-                if (string.IsNullOrWhiteSpace(dto.RejectionReason))
-                {
-                    return ServiceResult<string>.Fail("MSG-45", "Please provide a reason for rejection.");
-                }
-
-                var employee = await _context.Employees
-                    .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId);
-
-                if (employee == null)
-                {
-                    return ServiceResult<string>.Fail("MSG-46", "Employee not found.");
-                }
-
-                // Validation using frozen TargetApproverId
-                if (leaveRequest.TargetApproverId == null || leaveRequest.TargetApproverId != managerUserId)
-                {
-                    return ServiceResult<string>.Fail("MSG-41", "You do not have authority to process this request.");
-                }
-
-                leaveRequest.Status = "Rejected";
-                leaveRequest.RejectionReason = dto.RejectionReason;
-                leaveRequest.ReviewedDate = DateTime.Now;
-                leaveRequest.ReviewedBy = managerUserId;
-                leaveRequest.ReviewerComments = dto.RejectionReason;
-                leaveRequest.ApprovedDate = null;
-                leaveRequest.ApprovedBy = null;
-
-                var employeeUser = await _context.Users
-                    .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId && x.IsActive);
-
-                if (employeeUser != null)
-                {
-                    var notification = new Notification
-                    {
-                        RecipientUserId = employeeUser.UserId,
-                        NotificationType = "Leave",
-                        Title = "Leave Request Rejected",
-                        Message = $"Your leave request {leaveRequest.RequestNumber} has been rejected.",
-                        RelatedEntity = "LeaveRequest",
-                        RelatedEntityId = leaveRequest.LeaveRequestId,
-                        IsRead = false,
-                        SentDate = DateTime.Now
-                    };
-
-                    _context.Notifications.Add(notification);
-                }
-
-                var auditLog = new AuditLog
-                {
-                    TableName = "LeaveRequests",
-                    Action = "UPDATE",
-                    RecordId = leaveRequest.LeaveRequestId,
-                    UserId = managerUserId,
-                    NewValues = JsonSerializer.Serialize(new
-                    {
-                        leaveRequest.LeaveRequestId,
-                        leaveRequest.Status,
-                        leaveRequest.RejectionReason,
-                        leaveRequest.ReviewedDate,
-                        leaveRequest.ReviewedBy,
-                        leaveRequest.ReviewerComments
-                    }),
-                    ActionDate = DateTime.Now
+                    RecipientUserId = employeeUser.UserId,
+                    NotificationType = "Leave",
+                    Title = "Leave Request Rejected",
+                    Message = $"Your leave request {leaveRequest.RequestNumber} has been rejected.",
+                    RelatedEntity = "LeaveRequest",
+                    RelatedEntityId = leaveRequest.LeaveRequestId,
+                    IsRead = false,
+                    SentDate = DateTime.Now
                 };
 
-                _context.AuditLogs.Add(auditLog);
-
-                await _context.SaveChangesAsync();
-
-                return ServiceResult<string>.Ok("MSG-44", "Request rejected successfully.", null);
+                _context.Notifications.Add(notification);
             }
-            catch (Exception ex)
+
+            var auditLog = new AuditLog
             {
-                return ServiceResult<string>.Fail("MSG-500", $"An error occurred: {ex.Message}");
-            }
+                TableName = "LeaveRequests",
+                Action = "UPDATE",
+                RecordId = leaveRequest.LeaveRequestId,
+                UserId = managerUserId,
+                NewValues = JsonSerializer.Serialize(new
+                {
+                    leaveRequest.LeaveRequestId,
+                    leaveRequest.Status,
+                    leaveRequest.RejectionReason,
+                    leaveRequest.ReviewedDate,
+                    leaveRequest.ReviewedBy,
+                    leaveRequest.ReviewerComments
+                }),
+                ActionDate = DateTime.Now
+            };
+
+            _context.AuditLogs.Add(auditLog);
+
+            await _context.SaveChangesAsync();
+
+            return ServiceResult<string>.Ok("MSG-44", "Request rejected successfully.", null);
         }
         public async Task<ServiceResult<string>> CancelLeaveRequestAsync(int userId,int leaveRequestId,CancelLeaveRequestDTO dto)
         {
-            try
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
+
+            if (user == null || user.EmployeeId == null)
             {
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
-
-                if (user == null || user.EmployeeId == null)
-                {
-                    return ServiceResult<string>.Fail("MSG-106", "Access Denied.");
-                }
-
-                var leaveRequest = await _context.LeaveRequests
-                    .FirstOrDefaultAsync(x => x.LeaveRequestId == leaveRequestId);
-
-                if (leaveRequest == null)
-                {
-                    return ServiceResult<string>.Fail("MSG-39", "Leave request not found.");
-                }
-
-                if (leaveRequest.EmployeeId != user.EmployeeId)
-                {
-                    return ServiceResult<string>.Fail("MSG-106", "Access Denied.");
-                }
-
-                if (leaveRequest.Status != "Pending")
-                {
-                    return ServiceResult<string>.Fail(
-                        "MSG-38",
-                        "Cannot cancel this request. It has already been approved/rejected/cancelled.");
-                }
-
-                leaveRequest.Status = "Cancelled";
-                leaveRequest.ReviewerComments = dto.Reason;
-                leaveRequest.RejectionReason = dto.Reason;
-                leaveRequest.ReviewedDate = DateTime.Now;
-                leaveRequest.ReviewedBy = userId;
-                leaveRequest.ApprovedDate = null;
-                leaveRequest.ApprovedBy = null;
-
-                var managerUser = await _context.Users
-                    .FirstOrDefaultAsync(x => x.EmployeeId == user.EmployeeId && x.IsActive);
-
-                var auditLog = new AuditLog
-                {
-                    TableName = "LeaveRequests",
-                    Action = "UPDATE",
-                    RecordId = leaveRequest.LeaveRequestId,
-                    UserId = userId,
-                    NewValues = JsonSerializer.Serialize(new
-                    {
-                        leaveRequest.LeaveRequestId,
-                        leaveRequest.Status,
-                        CancelReason = dto.Reason,
-                        leaveRequest.ReviewedDate,
-                        leaveRequest.ReviewedBy
-                    }),
-                    ActionDate = DateTime.Now
-                };
-
-                _context.AuditLogs.Add(auditLog);
-
-                await _context.SaveChangesAsync();
-
-                return ServiceResult<string>.Ok("MSG-37", "Request cancelled successfully.", null);
+                return ServiceResult<string>.Fail("MSG-106", "Access Denied.");
             }
-            catch (Exception ex)
+
+            var leaveRequest = await _context.LeaveRequests
+                .FirstOrDefaultAsync(x => x.LeaveRequestId == leaveRequestId);
+
+            if (leaveRequest == null)
             {
-                return ServiceResult<string>.Fail("MSG-500", $"An error occurred: {ex.Message}");
+                return ServiceResult<string>.Fail("MSG-39", "Leave request not found.");
             }
+
+            if (leaveRequest.EmployeeId != user.EmployeeId)
+            {
+                return ServiceResult<string>.Fail("MSG-106", "Access Denied.");
+            }
+
+            if (leaveRequest.Status != "Pending")
+            {
+                return ServiceResult<string>.Fail(
+                    "MSG-38",
+                    "Cannot cancel this request. It has already been approved/rejected/cancelled.");
+            }
+
+            leaveRequest.Status = "Cancelled";
+            leaveRequest.ReviewerComments = dto.Reason;
+            leaveRequest.RejectionReason = dto.Reason;
+            leaveRequest.ReviewedDate = DateTime.Now;
+            leaveRequest.ReviewedBy = userId;
+            leaveRequest.ApprovedDate = null;
+            leaveRequest.ApprovedBy = null;
+
+            var managerUser = await _context.Users
+                .FirstOrDefaultAsync(x => x.EmployeeId == user.EmployeeId && x.IsActive);
+
+            var auditLog = new AuditLog
+            {
+                TableName = "LeaveRequests",
+                Action = "UPDATE",
+                RecordId = leaveRequest.LeaveRequestId,
+                UserId = userId,
+                NewValues = JsonSerializer.Serialize(new
+                {
+                    leaveRequest.LeaveRequestId,
+                    leaveRequest.Status,
+                    CancelReason = dto.Reason,
+                    leaveRequest.ReviewedDate,
+                    leaveRequest.ReviewedBy
+                }),
+                ActionDate = DateTime.Now
+            };
+
+            _context.AuditLogs.Add(auditLog);
+
+            await _context.SaveChangesAsync();
+
+            return ServiceResult<string>.Ok("MSG-37", "Request cancelled successfully.", null);
         }
         public async Task<ServiceResult<List<MyLeaveRequestItemDTO>>> GetMyLeaveRequestsAsync(int userId)
         {
@@ -613,70 +585,61 @@ namespace HRManagement.Services.Leaves
         }
         public async Task<ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>> GetTeamLeaveCalendarAsync(int managerUserId)
         {
-            try
+            var managerUser = await _context.Users
+                .FirstOrDefaultAsync(x => x.UserId == managerUserId && x.IsActive);
+
+            if (managerUser == null)
             {
-                var managerUser = await _context.Users
-                    .FirstOrDefaultAsync(x => x.UserId == managerUserId && x.IsActive);
-
-                if (managerUser == null)
-                {
-                    return ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>.Fail("MSG-106", "Access Denied.");
-                }
-                
-                if (managerUser.EmployeeId == null)
-                {
-                    return ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>.Ok(
-                        "MSG-00",
-                        "User has no employee profile, so no team calendar is available.",
-                        new List<TeamLeaveCalendarDTO>());
-                }
-
-                var managerEmployeeId = managerUser.EmployeeId;
-                var topLevelFallbackUserId = await _topLevelResolver.GetTopLevelFallbackUserIdAsync();
-                var defaultFallbackUserId = await _topLevelResolver.GetDefaultFallbackUserIdAsync();
-
-                var approvedLeaves = await _context.LeaveRequests
-                    .Include(x => x.Employee)
-                        .ThenInclude(e => e.Position)
-                    .Include(x => x.LeaveType)
-                    .Where(x =>
-                        x.Status == "Approved" &&
-                        x.TargetApproverId == managerUserId
-                    )
-                    .OrderBy(x => x.StartDate)
-                    .Select(x => new TeamLeaveCalendarDTO
-                    {
-                        LeaveRequestId = x.LeaveRequestId,
-                        EmployeeId = x.EmployeeId,
-                        EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
-                        LeaveTypeId = x.LeaveTypeId,
-                        LeaveTypeName = x.LeaveType.LeaveTypeName,
-                        StartDate = x.StartDate,
-                        EndDate = x.EndDate,
-                        NumberOfDays = x.NumberOfDays,
-                        Status = x.Status,
-                        IsTopLevel = x.Employee.Position != null && x.Employee.Position.IsTopLevel
-                    })
-                    .ToListAsync();
-
-                if (!approvedLeaves.Any())
-                {
-                    return ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>.Fail(
-                        "MSG-47",
-                        "No leaves scheduled.");
-                }
-
-                return ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>.Ok(
-                    "MSG-48",
-                    "Team leave calendar retrieved successfully.",
-                    approvedLeaves);
+                return ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>.Fail("MSG-106", "Access Denied.");
             }
-            catch (Exception ex)
+
+            if (managerUser.EmployeeId == null)
+            {
+                return ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>.Ok(
+                    "MSG-00",
+                    "User has no employee profile, so no team calendar is available.",
+                    new List<TeamLeaveCalendarDTO>());
+            }
+
+            var managerEmployeeId = managerUser.EmployeeId;
+            var topLevelFallbackUserId = await _topLevelResolver.GetTopLevelFallbackUserIdAsync();
+            var defaultFallbackUserId = await _topLevelResolver.GetDefaultFallbackUserIdAsync();
+
+            var approvedLeaves = await _context.LeaveRequests
+                .Include(x => x.Employee)
+                    .ThenInclude(e => e.Position)
+                .Include(x => x.LeaveType)
+                .Where(x =>
+                    x.Status == "Approved" &&
+                    x.TargetApproverId == managerUserId
+                )
+                .OrderBy(x => x.StartDate)
+                .Select(x => new TeamLeaveCalendarDTO
+                {
+                    LeaveRequestId = x.LeaveRequestId,
+                    EmployeeId = x.EmployeeId,
+                    EmployeeName = x.Employee.FirstName + " " + x.Employee.LastName,
+                    LeaveTypeId = x.LeaveTypeId,
+                    LeaveTypeName = x.LeaveType.LeaveTypeName,
+                    StartDate = x.StartDate,
+                    EndDate = x.EndDate,
+                    NumberOfDays = x.NumberOfDays,
+                    Status = x.Status,
+                    IsTopLevel = x.Employee.Position != null && x.Employee.Position.IsTopLevel
+                })
+                .ToListAsync();
+
+            if (!approvedLeaves.Any())
             {
                 return ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>.Fail(
-                    "MSG-500",
-                    $"An error occurred: {ex.Message}");
+                    "MSG-47",
+                    "No leaves scheduled.");
             }
+
+            return ServiceResult<IEnumerable<TeamLeaveCalendarDTO>>.Ok(
+                "MSG-48",
+                "Team leave calendar retrieved successfully.",
+                approvedLeaves);
         }
 
         public async Task<ServiceResult<List<PendingLeaveRequestDTO>>> GetPendingLeaveRequestsAsync(int managerUserId)

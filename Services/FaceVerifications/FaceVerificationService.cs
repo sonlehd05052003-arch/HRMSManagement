@@ -30,7 +30,7 @@ namespace HRManagement.Services.FaceVerifications
         public async Task<string> RegisterFaceAsync(int employeeId, string referenceImageBase64)
         {
             if (string.IsNullOrWhiteSpace(referenceImageBase64))
-                throw new Exception("Reference image is required.");
+                throw new ArgumentException("Reference image is required.");
 
             var imagePath = await _fileStorageService.SaveBase64ImageAsync(
                 referenceImageBase64,
@@ -103,7 +103,7 @@ namespace HRManagement.Services.FaceVerifications
         {
             var existing = await _attendanceRepository.GetActiveFaceProfileByEmployeeIdAsync(employeeId);
             if (existing == null)
-                throw new Exception("Nhân viên chưa có hồ sơ khuôn mặt.");
+                throw new KeyNotFoundException("Nhân viên chưa có hồ sơ khuôn mặt.");
 
             existing.Status = "Inactive";
             existing.ModifiedDate = DateTime.Now;
@@ -121,7 +121,7 @@ namespace HRManagement.Services.FaceVerifications
             string? location)
         {
             if (string.IsNullOrWhiteSpace(faceImageBase64))
-                throw new Exception("Face image is required.");
+                throw new ArgumentException("Face image is required.");
 
             var faceProfile = await _attendanceRepository.GetActiveFaceProfileByEmployeeIdAsync(employeeId);
 

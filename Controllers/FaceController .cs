@@ -33,26 +33,16 @@ namespace HRManagement.Controllers
             if (request == null || string.IsNullOrWhiteSpace(request.ReferenceImageBase64))
                 return BadRequest(new { message = "Ảnh khuôn mặt là bắt buộc." });
 
-            try
-            {
-                var imagePath = await _faceVerificationService.RegisterFaceAsync(
-                    employeeId,
-                    request.ReferenceImageBase64
-                );
+            var imagePath = await _faceVerificationService.RegisterFaceAsync(
+                employeeId,
+                request.ReferenceImageBase64
+            );
 
-                return Ok(new
-                {
-                    message = "Đăng ký khuôn mặt thành công.",
-                    referenceImagePath = imagePath
-                });
-            }
-            catch (Exception ex)
+            return Ok(new
             {
-                return BadRequest(new
-                {
-                    message = ex.Message
-                });
-            }
+                message = "Đăng ký khuôn mặt thành công.",
+                referenceImagePath = imagePath
+            });
         }
 
         [HttpGet("check-registration")]
@@ -75,15 +65,8 @@ namespace HRManagement.Controllers
         [HttpGet("admin/employees")]
         public async Task<IActionResult> GetAllEmployeesFaceStatus()
         {
-            try
-            {
-                var result = await _faceVerificationService.GetAllEmployeesFaceStatusAsync();
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var result = await _faceVerificationService.GetAllEmployeesFaceStatusAsync();
+            return Ok(result);
         }
 
         [HttpPost("admin/register/{employeeId:int}")]
@@ -92,33 +75,19 @@ namespace HRManagement.Controllers
             if (request == null || string.IsNullOrWhiteSpace(request.ReferenceImageBase64))
                 return BadRequest(new { message = "Ảnh khuôn mặt là bắt buộc." });
 
-            try
+            var imagePath = await _faceVerificationService.RegisterFaceAsync(employeeId, request.ReferenceImageBase64);
+            return Ok(new
             {
-                var imagePath = await _faceVerificationService.RegisterFaceAsync(employeeId, request.ReferenceImageBase64);
-                return Ok(new
-                {
-                    message = $"Đăng ký khuôn mặt cho nhân viên #{employeeId} thành công.",
-                    referenceImagePath = imagePath
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+                message = $"Đăng ký khuôn mặt cho nhân viên #{employeeId} thành công.",
+                referenceImagePath = imagePath
+            });
         }
 
         [HttpDelete("admin/{employeeId:int}")]
         public async Task<IActionResult> AdminDeleteFace(int employeeId)
         {
-            try
-            {
-                await _faceVerificationService.DeleteFaceAsync(employeeId);
-                return Ok(new { message = $"Đã xóa hồ sơ khuôn mặt của nhân viên #{employeeId}." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            await _faceVerificationService.DeleteFaceAsync(employeeId);
+            return Ok(new { message = $"Đã xóa hồ sơ khuôn mặt của nhân viên #{employeeId}." });
         }
 
         // ──────────────────────────────────────────────────────────────────────────

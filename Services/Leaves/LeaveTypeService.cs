@@ -155,7 +155,7 @@ namespace HRManagement.Services.Leaves
                                x.LeaveTypeCode.ToLower() == dto.LeaveTypeCode.ToLower());
 
             if (codeExists)
-                throw new Exception("LeaveTypeCode already exists.");
+                throw new InvalidOperationException("LeaveTypeCode already exists.");
 
             leaveType.LeaveTypeCode = dto.LeaveTypeCode.Trim();
             leaveType.LeaveTypeName = dto.LeaveTypeName.Trim();

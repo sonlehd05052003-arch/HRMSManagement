@@ -48,15 +48,6 @@ namespace HRManagement.Controllers
             {
                 return Unauthorized(new { success = false, message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new
-                {
-                    success = false,
-                    message = "Đã xảy ra lỗi hệ thống.",
-                    detail = ex.Message
-                });
-            }
         }
 
         [HttpGet]
@@ -131,15 +122,6 @@ namespace HRManagement.Controllers
             {
                 return NotFound(new { success = false, message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new
-                {
-                    success = false,
-                    message = "Đã xảy ra lỗi hệ thống.",
-                    detail = ex.Message
-                });
-            }
         }
 
         [HttpPatch("{id}/deactivate")]
@@ -163,17 +145,6 @@ namespace HRManagement.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { success = false, message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new
-                {
-                    success = false,
-                    message = "Đã xảy ra lỗi hệ thống.",
-                    detail = $"{ex.GetType().FullName}: {ex.Message}" +
-                             (ex.InnerException != null ? $"; Inner: {ex.InnerException.GetType().FullName}: {ex.InnerException.Message}" : string.Empty),
-                    stack = ex.StackTrace
-                });
             }
         }
 
@@ -199,15 +170,6 @@ namespace HRManagement.Controllers
             {
                 return NotFound(new { success = false, message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new
-                {
-                    success = false,
-                    message = "Đã xảy ra lỗi hệ thống.",
-                    detail = ex.Message
-                });
-            }
         }
 
         [HttpDelete("{id}")]
@@ -231,15 +193,6 @@ namespace HRManagement.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { success = false, message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new
-                {
-                    success = false,
-                    message = "Đã xảy ra lỗi hệ thống.",
-                    detail = ex.Message
-                });
             }
         }
     }

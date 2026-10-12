@@ -26,11 +26,11 @@ public class FaceEmbeddingService
     {
         using var image = Cv2.ImRead(imagePath);
         if (image.Empty())
-            throw new Exception("Cannot read image.");
+            throw new InvalidOperationException("Cannot read image.");
 
         var faceRow = DetectSingleFace(image);
         if (faceRow == null)
-            throw new Exception("No face detected or multiple faces detected.");
+            throw new InvalidOperationException("No face detected or multiple faces detected.");
 
         using (faceRow)
         {

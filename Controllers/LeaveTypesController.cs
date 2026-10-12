@@ -47,34 +47,20 @@ namespace HRManagement.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateLeaveType([FromBody] CreateLeaveTypeDTO dto)
         {
-            try
-            {
-                var result = await _leaveTypeService.CreateLeaveTypeAsync(dto);
-                return CreatedAtAction(nameof(GetLeaveTypeById), new { id = result.LeaveTypeId }, result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var result = await _leaveTypeService.CreateLeaveTypeAsync(dto);
+            return CreatedAtAction(nameof(GetLeaveTypeById), new { id = result.LeaveTypeId }, result);
         }
 
         // PUT: api/leave-types/5
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateLeaveType(int id, [FromBody] UpdateLeaveTypeDTO dto)
         {
-            try
-            {
-                var result = await _leaveTypeService.UpdateLeaveTypeAsync(id, dto);
+            var result = await _leaveTypeService.UpdateLeaveTypeAsync(id, dto);
 
-                if (result == null)
-                    return NotFound(new { message = "Leave type not found." });
+            if (result == null)
+                return NotFound(new { message = "Leave type not found." });
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            return Ok(result);
         }
     }
 }
