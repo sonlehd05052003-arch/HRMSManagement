@@ -1,0 +1,28 @@
+# Builds the API and runs the tests on every push and pull request to main.
+# The tests use EF Core's in-memory provider, so no SQL Server is needed here.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore HRManagement.sln
+
+      - name: Build
+        run: dotnet build HRManagement.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Tests/HRManagement.Tests/HRManagement.Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal"
