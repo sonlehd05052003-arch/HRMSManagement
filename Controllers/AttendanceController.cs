@@ -230,6 +230,10 @@ namespace HRManagement.Controllers
                 if (fromDate.HasValue && toDate.HasValue && fromDate > toDate)
                     return BadRequest(new { message = "Từ ngày không được lớn hơn đến ngày." });
 
+                // The whole company's attendance is loaded in one response, so keep the window bounded
+                if (fromDate.HasValue && toDate.HasValue && toDate.Value.DayNumber - fromDate.Value.DayNumber > 366)
+                    return BadRequest(new { message = "Chỉ tìm kiếm được tối đa 1 năm mỗi lần." });
+
                 if (employeeId.HasValue && employeeId.Value <= 0)
                     return BadRequest(new { message = "EmployeeId không hợp lệ." });
 

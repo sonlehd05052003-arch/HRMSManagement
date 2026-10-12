@@ -308,7 +308,8 @@ namespace HRManagement.Services.Attendances
             var finalFrom = fromDate ?? DateOnly.FromDateTime(AppTime.Now).AddDays(-30);
             var finalTo = toDate ?? DateOnly.FromDateTime(AppTime.Now);
 
-            var records = await _attendanceRepository.SearchAttendanceAsync(fromDate, toDate, employeeId, status);
+            // Same window as the overtime, leave and shift lookups below; without dates this used to load the whole history
+            var records = await _attendanceRepository.SearchAttendanceAsync(finalFrom, finalTo, employeeId, status);
             
             // Dùng Dictionary để quản lý bản ghi theo (EmployeeId, Date)
             var attendanceMap = records
