@@ -17,18 +17,18 @@ namespace HRManagement.Services.Users
     {
         private readonly IAuthRepository _authRepository;
         private readonly IEmailService _emailService;
-        private readonly IConfiguration _configuration;
+        private readonly JwtTokenIssuer _tokenIssuer;
         private readonly IMemoryCache _cache;
 
         public AuthService(
             IAuthRepository authRepository,
             IEmailService emailService,
-            IConfiguration configuration,
+            JwtTokenIssuer tokenIssuer,
             IMemoryCache cache)
         {
             _authRepository = authRepository;
             _emailService = emailService;
-            _configuration = configuration;
+            _tokenIssuer = tokenIssuer;
             _cache = cache;
         }
 
@@ -80,7 +80,7 @@ namespace HRManagement.Services.Users
             if (user.CompanyId == null)
                 claims.Add(new Claim(ClaimTypes.Role, PlatformRoles.SuperAdmin));
 
-            var token = GenerateJwtToken(claims);
+            var token = _tokenIssuer.Issue(claims, sessionStartUtc: now);
             return (true, null, token);
         }
 
@@ -204,23 +204,6 @@ namespace HRManagement.Services.Users
             _cache.Remove(OtpAttemptsKey(user.UserId));
 
             return (true, null);
-        }
-
-        private string GenerateJwtToken(IEnumerable<Claim> claims)
-        {
-            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(30),
-                Issuer = _configuration["Jwt:Issuer"],
-                Audience = _configuration["Jwt:Audience"],
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature)
-            };
-            var handler = new JwtSecurityTokenHandler();
-            return handler.WriteToken(handler.CreateToken(tokenDescriptor));
         }
 
         private const string InvalidCredentialsMessage = "Tên đăng nhập hoặc mật khẩu không đúng";

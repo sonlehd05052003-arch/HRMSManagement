@@ -192,10 +192,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                         }
                     }
                 }
+
+                // Sliding session: an active user gets a fresh cookie once the current token is half used.
+                // Only for the cookie: a token sent in a header belongs to a tool that manages it itself.
+                if (context.Result?.Failure == null
+                    && principal != null
+                    && string.IsNullOrEmpty(context.Request.Headers.Authorization)
+                    && context.Request.Cookies.ContainsKey(AuthCookie.Name))
+                {
+                    var issuer = context.HttpContext.RequestServices.GetRequiredService<JwtTokenIssuer>();
+                    if (issuer.TryRenew(principal, context.SecurityToken) is { } renewed)
+                        AuthCookie.Append(context.HttpContext, renewed.Token, renewed.ExpiresUtc);
+                }
             }
         };
     });
 
+builder.Services.AddSingleton<JwtTokenIssuer>();
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddSingleton<IPermissionCache, PermissionCache>();
