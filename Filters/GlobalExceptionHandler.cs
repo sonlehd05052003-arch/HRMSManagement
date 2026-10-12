@@ -5,7 +5,8 @@ namespace HRManagement.Filters
     /// <summary>
     /// Turns exceptions that escape a controller into a JSON { message, traceId } response.
     /// Services throw the exception types below with a message meant for the user, so that message is returned;
-    /// anything else is unexpected, gets logged, and the client only sees a generic message.
+    /// anything else, or anything thrown outside this project, is unexpected: it gets logged and the client only
+    /// sees a generic message.
     /// </summary>
     public class GlobalExceptionHandler : IExceptionHandler
     {
@@ -24,13 +25,21 @@ namespace HRManagement.Filters
             if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
                 return true;
 
+            // Only exceptions our own code threw carry a message written for the user. The same types thrown by
+            // EF Core or the framework (e.g. "Sequence contains no elements") describe internals instead.
+            var thrownByUs = exception.TargetSite?.DeclaringType?.Assembly == typeof(GlobalExceptionHandler).Assembly;
+
             var (status, message) = exception switch
             {
-                KeyNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
-                // 403, not 401: the client treats 401 as an expired session and redirects to the login page
-                UnauthorizedAccessException => (StatusCodes.Status403Forbidden, exception.Message),
-                ArgumentException or InvalidOperationException => (StatusCodes.Status400BadRequest, exception.Message),
                 BadHttpRequestException badRequest => (badRequest.StatusCode, "Yêu cầu không hợp lệ."),
+                _ when !thrownByUs => (StatusCodes.Status500InternalServerError, GenericMessage),
+                KeyNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
+                // The client treats 401 as an expired session and goes to the login page, so a signed-in user
+                // who lacks a right gets 403 and sees the message instead
+                UnauthorizedAccessException => (httpContext.User.Identity?.IsAuthenticated == true
+                    ? StatusCodes.Status403Forbidden
+                    : StatusCodes.Status401Unauthorized, exception.Message),
+                ArgumentException or InvalidOperationException => (StatusCodes.Status400BadRequest, exception.Message),
                 _ => (StatusCodes.Status500InternalServerError, GenericMessage)
             };
 
