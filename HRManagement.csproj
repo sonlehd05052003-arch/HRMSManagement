@@ -7,11 +7,11 @@
     <UserSecretsId>c83513c8-2d4e-4555-8abe-9b54ad4f6ca3</UserSecretsId>
   </PropertyGroup>
 
-  <!-- The test project lives under this folder but builds on its own -->
+  <!-- The test and tool projects live under these folders but build on their own -->
   <ItemGroup>
-    <Compile Remove="Tests\**" />
-    <Content Remove="Tests\**" />
-    <None Remove="Tests\**" />
+    <Compile Remove="Tests\**;Tools\**" />
+    <Content Remove="Tests\**;Tools\**" />
+    <None Remove="Tests\**;Tools\**" />
   </ItemGroup>
 
   <ItemGroup>
