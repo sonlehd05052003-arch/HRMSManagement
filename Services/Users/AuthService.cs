@@ -34,7 +34,8 @@ namespace HRManagement.Services.Users
 
         public async Task<(bool Success, string? Error, string? Token)> LoginAsync(LoginRequestDTO dto)
         {
-            var user = await _authRepository.GetUserForLoginAsync(dto.Username);
+            // A username never contains spaces; ignore any around it (copy-paste, mobile keyboards)
+            var user = await _authRepository.GetUserForLoginAsync(dto.Username?.Trim() ?? string.Empty);
 
             // Same message and roughly the same time whether or not the username exists, so the login form
             // cannot be used to find out which accounts exist
