@@ -449,11 +449,14 @@ namespace HRManagement.Services.Attendances
                 }
             }
 
-            // 2. Generate virtual "Absent" records
-            if (status == null || status == "Absent")
+            // 2. Generate virtual "Absent" records ("Holiday" on a day of the holiday calendar)
+            if (status == null || status == "Absent" || status == "Holiday")
             {
                 var today = DateOnly.FromDateTime(AppTime.Now);
-                
+                var holidays = await _context.Holidays.AsNoTracking()
+                    .Where(h => h.HolidayDate >= finalFrom && h.HolidayDate <= finalTo)
+                    .ToDictionaryAsync(h => h.HolidayDate);
+
                 // Tránh N+1 bằng cách cache tên nhân viên
                 var employeeNames = leaves.Select(l => new { l.EmployeeId, FullName = l.Employee?.FullName ?? "Unknown" })
                     .Concat(records.Select(r => new { r.EmployeeId, FullName = r.Employee?.FullName ?? "Unknown" }))
@@ -490,6 +493,7 @@ namespace HRManagement.Services.Attendances
                              employeeNames[assignment.EmployeeId] = empName;
                         }
 
+                        holidays.TryGetValue(assignment.AssignmentDate, out var holiday);
                         var absentRecord = new AttendanceResponseDto
                         {
                             AttendanceId = 0,
@@ -500,13 +504,14 @@ namespace HRManagement.Services.Attendances
                             ShiftName = assignment.Shift?.ShiftName ?? "No Shift",
                             CheckInTime = null,
                             CheckOutTime = null,
-                            WorkingHours = 0,
+                            // A paid holiday is a full paid day; nobody is absent on a holiday
+                            WorkingHours = holiday?.IsPaid == true ? (assignment.Shift?.WorkingHours ?? 8) : 0,
                             OvertimeHours = 0,
                             LateMinutes = 0,
                             EarlyLeaveMinutes = 0,
-                            Status = "Absent",
+                            Status = holiday != null ? "Holiday" : "Absent",
                             Source = "System",
-                            Remarks = null
+                            Remarks = holiday?.Name
                         };
                         attendanceMap[key] = absentRecord;
                     }

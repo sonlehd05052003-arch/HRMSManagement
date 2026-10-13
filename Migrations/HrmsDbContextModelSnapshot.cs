@@ -835,6 +835,46 @@ namespace HRManagement.Migrations
                     b.ToTable("FaceVerificationLogs");
                 });
 
+            modelBuilder.Entity("HRManagement.Models.Holiday", b =>
+                {
+                    b.Property<int>("HolidayId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("HolidayID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HolidayId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateOnly>("HolidayDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsPaid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("HolidayId");
+
+                    b.HasIndex(new[] { "CompanyId", "HolidayDate" }, "UQ_Holidays_Company_Date")
+                        .IsUnique();
+
+                    b.ToTable("Holidays");
+                });
+
             modelBuilder.Entity("HRManagement.Models.Hrprocedure", b =>
                 {
                     b.Property<int>("ProcedureId")
@@ -2668,6 +2708,16 @@ namespace HRManagement.Migrations
                     b.Navigation("AttendanceLog");
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.Holiday", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Holidays_Companies");
                 });
 
             modelBuilder.Entity("HRManagement.Models.Hrprocedure", b =>

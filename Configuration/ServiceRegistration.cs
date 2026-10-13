@@ -12,6 +12,7 @@ using HRManagement.Services.Employees;
 using HRManagement.Services.FaceVerifications;
 using HRManagement.Services.FileStorages;
 using HRManagement.Services.HRProceduces;
+using HRManagement.Services.Holidays;
 using HRManagement.Services.Leaves;
 using HRManagement.Services.Notifications;
 using HRManagement.Services.Overtimes;
@@ -90,6 +91,7 @@ namespace HRManagement.Configuration
             // Specialized Services
             services.AddScoped<IAuditService, AuditService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IHolidayService, HolidayService>();
             services.AddScoped<IExportService, ExportService>();
 
             // Resignation Request

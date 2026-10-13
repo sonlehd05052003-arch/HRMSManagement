@@ -716,9 +716,29 @@ namespace HRManagement.Services.Payroll
                     && sa.AssignmentDate <= period.EndDate)
                 .Select(sa => sa.AssignmentDate)
                 .Distinct()
-                .CountAsync();
+                .ToListAsync();
 
-            return assignedDays;
+            // Paid public holidays are working days the employee is paid for, whether or not a shift was assigned
+            var holidays = await PaidWeekdayHolidaysAsync(employeeId, period);
+            return assignedDays.Union(holidays).Count();
+        }
+
+        /// <summary>
+        /// Paid holidays on Monday–Friday within the period, from the employee's join date on.
+        /// </summary>
+        private async Task<HashSet<DateOnly>> PaidWeekdayHolidaysAsync(int employeeId, PayrollPeriod period)
+        {
+            var joinDate = await _context.Employees
+                .Where(e => e.EmployeeId == employeeId)
+                .Select(e => e.JoinDate)
+                .FirstOrDefaultAsync();
+            var from = joinDate > period.StartDate ? joinDate : period.StartDate;
+
+            var dates = await _context.Holidays
+                .Where(h => h.IsPaid && h.HolidayDate >= from && h.HolidayDate <= period.EndDate)
+                .Select(h => h.HolidayDate)
+                .ToListAsync();
+            return dates.Where(d => d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)).ToHashSet();
         }
 
         /// <summary>
@@ -819,6 +839,12 @@ namespace HRManagement.Services.Payroll
             // Bước 4: Cộng ngày nghỉ có lương
             actualDays += await CalculatePaidLeaveDaysAsync(employeeId, period);
 
+            // Bước 5: Ngày lễ có lương mà nhân viên không đi làm được tính đủ một công
+            // (đi làm ngày lễ thì công đã tính ở bước 3; phần làm thêm hưởng hệ số OT ngày lễ)
+            var workedDates = validRecords.Select(r => r.AttendanceDate).ToHashSet();
+            var holidays = await PaidWeekdayHolidaysAsync(employeeId, period);
+            actualDays += holidays.Count(d => !workedDates.Contains(d));
+
             return actualDays;
         }
 
@@ -837,6 +863,9 @@ namespace HRManagement.Services.Payroll
                     && l.LeaveType.IsPaid)
                 .ToListAsync();
 
+            // A leave that spans a public holiday does not count the holiday again: it is already a paid day
+            var holidays = await PaidWeekdayHolidaysAsync(employeeId, period);
+
             decimal paidLeaveDays = 0;
             foreach (var req in requests)
             {
@@ -845,7 +874,8 @@ namespace HRManagement.Services.Payroll
                 var current = start;
                 while (current <= end)
                 {
-                    if (current.DayOfWeek != DayOfWeek.Saturday && current.DayOfWeek != DayOfWeek.Sunday)
+                    if (current.DayOfWeek != DayOfWeek.Saturday && current.DayOfWeek != DayOfWeek.Sunday
+                        && !holidays.Contains(current))
                         paidLeaveDays++;
                     current = current.AddDays(1);
                 }
@@ -890,13 +920,22 @@ namespace HRManagement.Services.Payroll
             var details = new List<PayrollAllowance>();
             var totalOt = 0m;
 
+            // Overtime on a public holiday is paid at the holiday rate, also when the holiday falls on a weekend
+            var holidayDates = (await _context.Holidays
+                    .Where(h => h.HolidayDate >= period.StartDate && h.HolidayDate <= period.EndDate)
+                    .Select(h => h.HolidayDate)
+                    .ToListAsync())
+                .ToHashSet();
+
             foreach (var ot in overtimeRequests)
             {
-                var rate = ot.OvertimeDate.DayOfWeek switch
-                {
-                    DayOfWeek.Saturday or DayOfWeek.Sunday => cfg.OtWeekendMultiplier,
-                    _ => cfg.OtWeekdayMultiplier,
-                };
+                var rate = holidayDates.Contains(ot.OvertimeDate)
+                    ? cfg.OtHolidayMultiplier
+                    : ot.OvertimeDate.DayOfWeek switch
+                    {
+                        DayOfWeek.Saturday or DayOfWeek.Sunday => cfg.OtWeekendMultiplier,
+                        _ => cfg.OtWeekdayMultiplier,
+                    };
 
                 var otPay = Math.Round(hourlySalary * (decimal)ot.TotalHours * rate, 0);
                 totalOt += otPay;
@@ -1198,7 +1237,8 @@ namespace HRManagement.Services.Payroll
             int explanationApprovedDays = attendanceRecords.Count(a => a.ExplanationStatus == "Approved");
             decimal overtimeHours = overtimeRequests.Sum(o => o.TotalHours);
 
-            // Tính paid leave days (weekdays only, within period)
+            // Tính paid leave days (weekdays only, within period), like payroll: a public holiday is not a leave day
+            var holidays = await PaidWeekdayHolidaysAsync(employeeId, period);
             decimal paidLeaveDays = 0;
             foreach (var leave in leaveRequests.Where(l => l.LeaveType?.IsPaid == true))
             {
@@ -1206,7 +1246,7 @@ namespace HRManagement.Services.Payroll
                 var e = leave.EndDate < period.EndDate ? leave.EndDate : period.EndDate;
                 for (var d = s; d <= e; d = d.AddDays(1))
                 {
-                    if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday)
+                    if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday && !holidays.Contains(d))
                         paidLeaveDays++;
                 }
             }

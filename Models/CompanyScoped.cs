@@ -18,6 +18,7 @@ public partial class EmployeeContract : ICompanyScoped { public int CompanyId { 
 public partial class EmployeeDocument : ICompanyScoped { public int CompanyId { get; set; } }
 public partial class FaceProfile : ICompanyScoped { public int CompanyId { get; set; } }
 public partial class FaceVerificationLog : ICompanyScoped { public int CompanyId { get; set; } }
+public partial class Holiday : ICompanyScoped { public int CompanyId { get; set; } }
 public partial class Hrprocedure : ICompanyScoped { public int CompanyId { get; set; } }
 public partial class LeaveBalance : ICompanyScoped { public int CompanyId { get; set; } }
 public partial class LeaveRequest : ICompanyScoped { public int CompanyId { get; set; } }

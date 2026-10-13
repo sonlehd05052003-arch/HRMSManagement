@@ -41,6 +41,8 @@ public partial class HrmsDbContext : DbContext
 
     public virtual DbSet<EmployeeDocument> EmployeeDocuments { get; set; }
 
+    public virtual DbSet<Holiday> Holidays { get; set; }
+
     public virtual DbSet<Hrprocedure> Hrprocedures { get; set; }
 
     public virtual DbSet<LeaveBalance> LeaveBalances { get; set; }
@@ -314,6 +316,19 @@ public partial class HrmsDbContext : DbContext
                 .HasForeignKey(d => d.EmployeeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_EmployeeDocuments_Employees");
+        });
+
+        modelBuilder.Entity<Holiday>(entity =>
+        {
+            entity.HasKey(e => e.HolidayId);
+
+            // One entry per company per day
+            entity.HasIndex(e => new { e.CompanyId, e.HolidayDate }, "UQ_Holidays_Company_Date").IsUnique();
+
+            entity.Property(e => e.HolidayId).HasColumnName("HolidayID");
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.IsPaid).HasDefaultValue(true);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime");
         });
 
         modelBuilder.Entity<Hrprocedure>(entity =>
