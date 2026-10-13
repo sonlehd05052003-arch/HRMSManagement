@@ -81,21 +81,11 @@ namespace HRManagement.Controllers
                 })
                 .ToListAsync();
 
-            // Alerts (Mocked for realism)
-            var alerts = new List<NotificationDto>
-            {
-                new NotificationDto { Message = "Backup successful.", Level = "Info" },
-                new NotificationDto { Message = "3 failed login attempts detected.", Level = "Warning" },
-                new NotificationDto { Message = "Disk usage at 85%.", Level = "Warning" }
-            };
+            // Alerts: things in this company that need someone's attention (they used to be made-up examples)
+            var alerts = await BuildAdminAlertsAsync(today);
 
-            // Scheduled Tasks (Mocked)
-            var tasks = new List<ScheduledTaskDto>
-            {
-                new ScheduledTaskDto { Name = "Weekly Payroll Generation", Status = "Completed" },
-                new ScheduledTaskDto { Name = "Daily Attendance Sync", Status = "Running" },
-                new ScheduledTaskDto { Name = "Monthly Report Cleanup", Status = "Pending" }
-            };
+            // Scheduled tasks: the background jobs that really run, with how their last run went
+            var tasks = ScheduledTasks();
 
             return Ok(new AdminDashboardDto
             {
@@ -105,6 +95,64 @@ namespace HRManagement.Controllers
                 ScheduledTasks = tasks
             });
         }
+        private async Task<List<NotificationDto>> BuildAdminAlertsAsync(DateOnly today)
+        {
+            var staleBefore = AppTime.Now.AddDays(-3);
+            var alerts = new List<NotificationDto>();
+            void Add(int count, string level, string message)
+            {
+                if (count > 0) alerts.Add(new NotificationDto { Level = level, Message = message.Replace("{n}", count.ToString()) });
+            }
+
+            Add(await _context.LeaveRequests.CountAsync(l => l.Status == "Pending" && l.SubmittedDate < staleBefore),
+                "Warning", "{n} đơn nghỉ phép chờ duyệt quá 3 ngày.");
+            Add(await _context.OvertimeRequests.CountAsync(o => o.Status == "Pending" && o.SubmittedDate < staleBefore),
+                "Warning", "{n} đơn tăng ca chờ duyệt quá 3 ngày.");
+            Add(await _context.AttendanceRecords.CountAsync(a => a.ExplanationStatus == "Pending"),
+                "Info", "{n} phiếu giải trình chấm công đang chờ duyệt.");
+            Add(await _context.EmployeeContracts.CountAsync(c => c.Status == ContractStatuses.Active
+                    && c.EndDate.HasValue && c.EndDate >= today && c.EndDate <= today.AddDays(30)),
+                "Warning", "{n} hợp đồng lao động hết hạn trong 30 ngày tới.");
+            Add(await _context.Employees.CountAsync(e => e.EmploymentStatus == "Active"
+                    && !_context.FaceProfiles.Any(f => f.EmployeeId == e.EmployeeId && f.Status == "Active")),
+                "Info", "{n} nhân viên chưa đăng ký khuôn mặt để chấm công.");
+            Add(await _context.Users.CountAsync(u => !u.IsActive),
+                "Info", "{n} tài khoản đang bị khóa.");
+            return alerts;
+        }
+
+        /// <summary>The Hangfire recurring jobs, with the outcome of their last run.</summary>
+        private static List<ScheduledTaskDto> ScheduledTasks()
+        {
+            var names = new Dictionary<string, string>
+            {
+                [HRManagement.Services.Backgrounds.HRProcedureBackgroundService.JobId] = "Áp dụng thủ tục nhân sự đến hạn (5 phút/lần)",
+                [HRManagement.Services.Backgrounds.PayrollAttendanceReviewService.JobId] = "Mở review chấm công cho kỳ lương (mỗi giờ)",
+            };
+            try
+            {
+                using var connection = Hangfire.JobStorage.Current.GetConnection();
+                return Hangfire.Storage.StorageConnectionExtensions.GetRecurringJobs(connection)
+                    .Select(job => new ScheduledTaskDto
+                    {
+                        Name = names.GetValueOrDefault(job.Id, job.Id),
+                        Status = job.LastJobState switch
+                        {
+                            "Succeeded" => "Completed",
+                            "Processing" => "Running",
+                            "Failed" => "Failed",
+                            _ => "Pending"
+                        }
+                    })
+                    .ToList();
+            }
+            catch (InvalidOperationException)
+            {
+                // No job storage (e.g. Hangfire not configured in this environment)
+                return new List<ScheduledTaskDto>();
+            }
+        }
+
         [HttpGet("hr-stats")]
         [RequirePermission("Dashboard.Hr")]
         public async Task<IActionResult> GetHrStats([FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate)
