@@ -23,9 +23,6 @@ namespace HRManagement.DTOs
         public double AttendanceRate { get; set; }
         public double OvertimeHours { get; set; }
         public string SystemUptime { get; set; } = "99.9%";
-        public double ErrorRate { get; set; } = 0.05;
-        public string DatabaseSize { get; set; } = "156 MB";
-        public int ApiResponseTime { get; set; } = 45; // ms
     }
 
     public class RecentActivityDto

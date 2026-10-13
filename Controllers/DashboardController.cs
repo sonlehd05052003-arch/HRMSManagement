@@ -60,14 +60,11 @@ namespace HRManagement.Controllers
                 .Where(o => o.Status == "Approved" && o.OvertimeDate >= start && o.OvertimeDate <= end)
                 .SumAsync(o => o.TotalHours);
 
-            // 5. System Stats (Real-ish)
+            // 5. System Stats
             var uptime = AppTime.Now - Process.GetCurrentProcess().StartTime;
             stats.SystemUptime = $"{(int)uptime.TotalDays}d {uptime.Hours}h {uptime.Minutes}m";
-            
-            // Database Size (Mocked for now or query sys tables if possible)
-            stats.DatabaseSize = "42.5 MB"; 
-            stats.ErrorRate = 0.02; // Mocked
-            stats.ApiResponseTime = new Random().Next(30, 150);
+            // Database size, error rate and API response time used to be invented numbers (one was random on every
+            // load); nothing measures them, so they are no longer reported
 
             // Recent Activities
             var recentActivities = await _context.AuditLogs
