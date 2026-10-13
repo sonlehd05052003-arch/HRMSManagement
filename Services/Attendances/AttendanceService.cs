@@ -178,17 +178,17 @@ namespace HRManagement.Services.Attendances
         {
             var now = AppTime.Now;
 
-            // Láº¥y báº£n ghi cháº¥m cÃ´ng gáº§n nháº¥t (cÃ³ thá»ƒ Ä‘Ã£ checkout rá»“i - cho phÃ©p checkout láº¡i)
+            // Lấy bản ghi chấm công gần nhất (có thể đã checkout rồi - cho phép checkout lại)
             var attendance = await _attendanceRepository.GetLatestAttendanceRecordAsync(employeeId);
 
             if (attendance == null || !attendance.CheckInTime.HasValue)
-                throw new InvalidOperationException("Báº¡n chÆ°a check-in hoáº·c khÃ´ng tÃ¬m tháº¥y báº£n ghi cháº¥m cÃ´ng.");
+                throw new InvalidOperationException("Bạn chưa check-in hoặc không tìm thấy bản ghi chấm công.");
 
             if (attendance.IsLocked ?? false)
-                throw new InvalidOperationException("Báº£n ghi cháº¥m cÃ´ng Ä‘Ã£ bá»‹ khÃ³a.");
+                throw new InvalidOperationException("Bản ghi chấm công đã bị khóa.");
 
             if (string.IsNullOrWhiteSpace(dto.FaceImageBase64))
-                throw new ArgumentException("Vui lÃ²ng chá»¥p áº£nh khuÃ´n máº·t Ä‘á»ƒ check-out.");
+                throw new ArgumentException("Vui lòng chụp ảnh khuôn mặt để check-out.");
 
             Shift? shift = null;
             if (attendance.ShiftId.HasValue)
@@ -214,7 +214,7 @@ namespace HRManagement.Services.Attendances
                     throw new InvalidOperationException("Đã quá thời gian check-out cho phép.");
             }
 
-            // STEP 1: Verify face trÆ°á»›c
+            // STEP 1: Verify face trước
             var faceResult = await _faceVerificationService.VerifyAsync(
                 employeeId,
                 dto.FaceImageBase64,
@@ -225,7 +225,7 @@ namespace HRManagement.Services.Attendances
             );
 
             if (!faceResult.IsMatch)
-                throw new InvalidOperationException($"XÃ¡c minh khuÃ´n máº·t tháº¥t báº¡i. {faceResult.FailureReason}");
+                throw new InvalidOperationException($"Xác minh khuôn mặt thất bại. {faceResult.FailureReason}");
 
             var log = new AttendanceLog
             {
@@ -262,12 +262,12 @@ namespace HRManagement.Services.Attendances
 
             attendance.Source = "Web-Face";
 
-            // Entity Ä‘Ã£ Ä‘Æ°á»£c track bá»Ÿi EF Core tá»« GetOpenAttendanceRecordAsync,
-            // khÃ´ng cáº§n gá»i Update() vÃ¬ sáº½ mark cáº£ navigation properties â†’ lá»—i.
+            // Entity đã được track bởi EF Core từ GetOpenAttendanceRecordAsync,
+            // không cần gọi Update() vì sẽ mark cả navigation properties → lỗi.
             await _attendanceRepository.SaveChangesAsync();
 
             var result = await _attendanceRepository.GetAttendanceByIdAsync(attendance.AttendanceId)
-                ?? throw new InvalidOperationException("KhÃ´ng tÃ¬m tháº¥y báº£n ghi cháº¥m cÃ´ng sau khi check-out.");
+                ?? throw new InvalidOperationException("Không tìm thấy bản ghi chấm công sau khi check-out.");
 
             return _mapper.Map<AttendanceResponseDto>(result);
         }
@@ -570,10 +570,10 @@ namespace HRManagement.Services.Attendances
         public async Task<AttendanceResponseDto> ManualAdjustAttendanceAsync(int attendanceId, int approverId, ManualAdjustAttendanceDto dto)
         {
             var attendance = await _attendanceRepository.GetAttendanceByIdAsync(attendanceId)
-                ?? throw new InvalidOperationException("KhÃ´ng tÃ¬m tháº¥y báº£n ghi cháº¥m cÃ´ng.");
+                ?? throw new InvalidOperationException("Không tìm thấy bản ghi chấm công.");
 
             if (attendance.IsLocked ?? false)
-                throw new InvalidOperationException("Báº£n ghi cháº¥m cÃ´ng Ä‘Ã£ bá»‹ khÃ³a.");
+                throw new InvalidOperationException("Bản ghi chấm công đã bị khóa.");
 
             attendance.CheckInTime = dto.CheckInTime;
             attendance.CheckOutTime = dto.CheckOutTime;
@@ -607,7 +607,7 @@ namespace HRManagement.Services.Attendances
         {
             var existing = await _attendanceRepository.GetAttendanceByEmployeeAndDateAsync(dto.EmployeeId, dto.AttendanceDate);
             if (existing != null)
-                throw new InvalidOperationException("NhÃ¢n viÃªn Ä‘Ã£ cÃ³ báº£n ghi cháº¥m cÃ´ng trong ngÃ y nÃ y.");
+                throw new InvalidOperationException("Nhân viên đã có bản ghi chấm công trong ngày này.");
 
             decimal? workingHours = null;
             if (dto.CheckInTime.HasValue && dto.CheckOutTime.HasValue)
@@ -642,7 +642,7 @@ namespace HRManagement.Services.Attendances
             await _attendanceRepository.SaveChangesAsync();
 
             var created = await _attendanceRepository.GetAttendanceByEmployeeAndDateAsync(dto.EmployeeId, dto.AttendanceDate)
-                ?? throw new InvalidOperationException("KhÃ´ng tÃ¬m tháº¥y báº£n ghi sau khi táº¡o.");
+                ?? throw new InvalidOperationException("Không tìm thấy bản ghi sau khi tạo.");
 
             return _mapper.Map<AttendanceResponseDto>(created);
         }
@@ -650,7 +650,7 @@ namespace HRManagement.Services.Attendances
         public async System.Threading.Tasks.Task LockAttendanceAsync(int attendanceId, int userId)
         {
             var attendance = await _attendanceRepository.GetAttendanceByIdAsync(attendanceId)
-                ?? throw new InvalidOperationException("KhÃ´ng tÃ¬m tháº¥y báº£n ghi cháº¥m cÃ´ng.");
+                ?? throw new InvalidOperationException("Không tìm thấy bản ghi chấm công.");
 
             attendance.IsLocked = true;
             attendance.ModifiedDate = AppTime.Now;
@@ -693,13 +693,13 @@ namespace HRManagement.Services.Attendances
         public async Task<AttendanceResponseDto> SubmitExplanationAsync(int employeeId, int attendanceId, SubmitExplanationDto dto)
         {
             var attendance = await _attendanceRepository.GetAttendanceByIdAsync(attendanceId)
-                ?? throw new InvalidOperationException("KhÃ´ng tÃ¬m tháº¥y báº£n ghi cháº¥m cÃ´ng.");
+                ?? throw new InvalidOperationException("Không tìm thấy bản ghi chấm công.");
 
             if (attendance.EmployeeId != employeeId)
-                throw new InvalidOperationException("Báº¡n khÃ´ng cÃ³ quyá»n giáº£i trÃ¬nh cho báº£n ghi nÃ y.");
+                throw new InvalidOperationException("Bạn không có quyền giải trình cho bản ghi này.");
                 
             if (attendance.IsLocked == true)
-                throw new InvalidOperationException("Báº£n ghi cháº¥m cÃ´ng Ä‘Ã£ bá»‹ khÃ³a.");
+                throw new InvalidOperationException("Bản ghi chấm công đã bị khóa.");
 
             await AttendanceHelper.ApplyExplanationSubmissionAsync(
                 _context,
@@ -728,7 +728,7 @@ namespace HRManagement.Services.Attendances
 
             if (assignment == null)
             {
-                throw new InvalidOperationException("Báº¡n khÃ´ng cÃ³ ca lÃ m viá»‡c vÃ o ngÃ y nÃ y Ä‘á»ƒ giáº£i trÃ¬nh.");
+                throw new InvalidOperationException("Bạn không có ca làm việc vào ngày này để giải trình.");
             }
 
             // Check if there is already an attendance record
@@ -736,7 +736,7 @@ namespace HRManagement.Services.Attendances
             if (attendance != null)
             {
                 if (attendance.IsLocked == true)
-                    throw new InvalidOperationException("Báº£n ghi cháº¥m cÃ´ng Ä‘Ã£ bá»‹ khÃ³a.");
+                    throw new InvalidOperationException("Bản ghi chấm công đã bị khóa.");
 
             }
             else
@@ -779,14 +779,14 @@ namespace HRManagement.Services.Attendances
         public async Task<AttendanceResponseDto> ApproveExplanationAsync(int managerId, int attendanceId, ApproveExplanationDto dto)
         {
             var attendance = await _attendanceRepository.GetAttendanceByIdAsync(attendanceId)
-                ?? throw new InvalidOperationException("KhÃ´ng tÃ¬m tháº¥y báº£n ghi cháº¥m cÃ´ng.");
+                ?? throw new InvalidOperationException("Không tìm thấy bản ghi chấm công.");
 
             if (!string.Equals(attendance.ExplanationStatus, "Pending", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Phi?u gi?i trï¿½nh nï¿½y khï¿½ng cï¿½n ? tr?ng thï¿½i ch? duy?t.");
+                throw new InvalidOperationException("Phiếu giải trình này không còn ở trạng thái chờ duyệt.");
 
             var today = DateOnly.FromDateTime(AppTime.Now);
             if (attendance.AttendanceDate >= today)
-                throw new InvalidOperationException("Phiáº¿u giáº£i trÃ¬nh cho ngÃ y hiá»‡n táº¡i chá»‰ cÃ³ thá»ƒ Ä‘Æ°á»£c phÃª duyá»‡t sau khi ngÃ y lÃ m viá»‡c káº¿t thÃºc (tá»« ngÃ y mai).");
+                throw new InvalidOperationException("Phiếu giải trình cho ngày hiện tại chỉ có thể được phê duyệt sau khi ngày làm việc kết thúc (từ ngày mai).");
 
             if (dto.IsApproved)
             {
