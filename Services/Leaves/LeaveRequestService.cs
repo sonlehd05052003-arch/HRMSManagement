@@ -3,6 +3,7 @@ using HRManagement.DTOs.LeaveRequest;
 using HRManagement.Models;
 using HRManagement.Services.CurrentUsers;
 using HRManagement.Services.Approvals;
+using HRManagement.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace HRManagement.Services.Leaves
@@ -13,17 +14,20 @@ namespace HRManagement.Services.Leaves
         private readonly ICurrentUserService _currentUserService;
         private readonly IApprovalRouteService _approvalRouteService;
         private readonly ITopLevelResolver _topLevelResolver;
+        private readonly INotificationService _notifications;
 
         public LeaveRequestService(
             HrmsDbContext context, 
             ICurrentUserService currentUserService,
             IApprovalRouteService approvalRouteService,
-            ITopLevelResolver topLevelResolver)
+            ITopLevelResolver topLevelResolver,
+            INotificationService notifications)
         {
             _context = context;
             _currentUserService = currentUserService;
             _approvalRouteService = approvalRouteService;
             _topLevelResolver = topLevelResolver;
+            _notifications = notifications;
         }
         public async Task<ServiceResult<LeaveRequestResponseDTO>> CreateLeaveRequestAsync(int userId, CreateLeaveRequestDTO dto)
         {
@@ -162,21 +166,6 @@ namespace HRManagement.Services.Leaves
 
             _context.LeaveRequests.Add(leaveRequest);
 
-            if (approverId.HasValue)
-            {
-                var notification = new Notification
-                {
-                    RecipientUserId = approverId.Value,
-                    NotificationType = "Leave",
-                    Title = "New Leave Request Submitted",
-                    Message = $"A new leave request {leaveRequest.RequestNumber} is waiting for approval.",
-                    RelatedEntity = "LeaveRequest",
-                    RelatedEntityId = leaveRequest.LeaveRequestId,
-                    IsRead = false,
-                    SentDate = AppTime.Now
-                };
-                _context.Notifications.Add(notification);
-            }
 
             // If approved by system, we must deduct balance immediately
             if (initialStatus == "Approved" && leaveBalance != null)
@@ -187,6 +176,12 @@ namespace HRManagement.Services.Leaves
             }
 
             await _context.SaveChangesAsync();
+
+            // After the save, so the notification points at the request's real id
+            if (approverId.HasValue)
+                _notifications.Notify(approverId.Value, NotificationTypes.LeaveApproval, "Đơn nghỉ phép mới cần duyệt",
+                    $"Đơn nghỉ phép {leaveRequest.RequestNumber} ({leaveRequest.StartDate:dd/MM}–{leaveRequest.EndDate:dd/MM}) đang chờ bạn duyệt.",
+                    "LeaveRequest", leaveRequest.LeaveRequestId);
 
             var auditLog = new AuditLog
             {
@@ -341,21 +336,9 @@ namespace HRManagement.Services.Leaves
                 .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId && x.IsActive);
 
             if (employeeUser != null)
-            {
-                var notification = new Notification
-                {
-                    RecipientUserId = employeeUser.UserId,
-                    NotificationType = "Leave",
-                    Title = "Leave Request Approved",
-                    Message = $"Your leave request {leaveRequest.RequestNumber} has been approved.",
-                    RelatedEntity = "LeaveRequest",
-                    RelatedEntityId = leaveRequest.LeaveRequestId,
-                    IsRead = false,
-                    SentDate = AppTime.Now
-                };
-
-                _context.Notifications.Add(notification);
-            }
+                _notifications.Notify(employeeUser.UserId, NotificationTypes.LeaveResult, "Đơn nghỉ phép đã được duyệt",
+                    $"Đơn nghỉ phép {leaveRequest.RequestNumber} ({leaveRequest.StartDate:dd/MM}–{leaveRequest.EndDate:dd/MM}) đã được duyệt.",
+                    "LeaveRequest", leaveRequest.LeaveRequestId);
 
             var auditLog = new AuditLog
             {
@@ -440,21 +423,9 @@ namespace HRManagement.Services.Leaves
                 .FirstOrDefaultAsync(x => x.EmployeeId == leaveRequest.EmployeeId && x.IsActive);
 
             if (employeeUser != null)
-            {
-                var notification = new Notification
-                {
-                    RecipientUserId = employeeUser.UserId,
-                    NotificationType = "Leave",
-                    Title = "Leave Request Rejected",
-                    Message = $"Your leave request {leaveRequest.RequestNumber} has been rejected.",
-                    RelatedEntity = "LeaveRequest",
-                    RelatedEntityId = leaveRequest.LeaveRequestId,
-                    IsRead = false,
-                    SentDate = AppTime.Now
-                };
-
-                _context.Notifications.Add(notification);
-            }
+                _notifications.Notify(employeeUser.UserId, NotificationTypes.LeaveResult, "Đơn nghỉ phép bị từ chối",
+                    $"Đơn nghỉ phép {leaveRequest.RequestNumber} ({leaveRequest.StartDate:dd/MM}–{leaveRequest.EndDate:dd/MM}) đã bị từ chối.",
+                    "LeaveRequest", leaveRequest.LeaveRequestId);
 
             var auditLog = new AuditLog
             {

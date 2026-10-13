@@ -3,6 +3,7 @@ using HRManagement.DTOs.OvertimeRequest;
 using HRManagement.Models;
 using Microsoft.EntityFrameworkCore;
 using HRManagement.Services.Approvals;
+using HRManagement.Services.Notifications;
 using System.Text.Json;
 
 namespace HRManagement.Services.Overtimes
@@ -12,15 +13,18 @@ namespace HRManagement.Services.Overtimes
         private readonly HrmsDbContext _context;
         private readonly IApprovalRouteService _approvalRouteService;
         private readonly ITopLevelResolver _topLevelResolver;
+        private readonly INotificationService _notifications;
 
         public OvertimeRequestService(
             HrmsDbContext context, 
             IApprovalRouteService approvalRouteService,
-            ITopLevelResolver topLevelResolver)
+            ITopLevelResolver topLevelResolver,
+            INotificationService notifications)
         {
             _context = context;
             _approvalRouteService = approvalRouteService;
             _topLevelResolver = topLevelResolver;
+            _notifications = notifications;
         }
 
         public async Task<ServiceResult<string>> CreateOvertimeRequestAsync(int userId, CreateOvertimeRequestDTO dto)
@@ -216,21 +220,6 @@ namespace HRManagement.Services.Overtimes
 
             _context.OvertimeRequests.Add(overtimeRequest);
 
-            if (approverId.HasValue)
-            {
-                var notification = new Notification
-                {
-                    RecipientUserId = approverId.Value,
-                    NotificationType = "Overtime",
-                    Title = "New Overtime Request",
-                    Message = $"A new overtime request {requestNumber} is waiting for approval.",
-                    RelatedEntity = "OvertimeRequest",
-                    RelatedEntityId = overtimeRequest.OvertimeRequestId,
-                    IsRead = false,
-                    SentDate = AppTime.Now
-                };
-                _context.Notifications.Add(notification);
-            }
 
             var auditLog = new AuditLog
             {
@@ -254,6 +243,15 @@ namespace HRManagement.Services.Overtimes
             _context.AuditLogs.Add(auditLog);
 
             await _context.SaveChangesAsync();
+
+            // After the save, so the notification points at the request's real id
+            if (approverId.HasValue)
+            {
+                _notifications.Notify(approverId.Value, NotificationTypes.OvertimeApproval, "Đơn tăng ca mới cần duyệt",
+                    $"Đơn tăng ca {overtimeRequest.RequestNumber} ngày {overtimeRequest.OvertimeDate:dd/MM} ({overtimeRequest.TotalHours:0.#} giờ) đang chờ bạn duyệt.",
+                    "OvertimeRequest", overtimeRequest.OvertimeRequestId);
+                await _context.SaveChangesAsync();
+            }
 
             return ServiceResult<string>.Ok("MSG-29", "Overtime request submitted successfully.", null);
         }
@@ -287,20 +285,9 @@ namespace HRManagement.Services.Overtimes
             // Notification for employee
             var employeeUser = await _context.Users.FirstOrDefaultAsync(u => u.EmployeeId == request.EmployeeId);
             if (employeeUser != null)
-            {
-                var notification = new Notification
-                {
-                    RecipientUserId = employeeUser.UserId,
-                    NotificationType = "Overtime",
-                    Title = "Overtime Approved",
-                    Message = $"Your overtime request {request.RequestNumber} for {request.OvertimeDate} has been approved.",
-                    RelatedEntity = "OvertimeRequest",
-                    RelatedEntityId = request.OvertimeRequestId,
-                    IsRead = false,
-                    SentDate = AppTime.Now
-                };
-                _context.Notifications.Add(notification);
-            }
+                _notifications.Notify(employeeUser.UserId, NotificationTypes.OvertimeResult, "Đơn tăng ca đã được duyệt",
+                    $"Đơn tăng ca {request.RequestNumber} ngày {request.OvertimeDate:dd/MM} đã được duyệt.",
+                    "OvertimeRequest", request.OvertimeRequestId);
 
             var auditLog = new AuditLog
             {
@@ -352,20 +339,9 @@ namespace HRManagement.Services.Overtimes
             // Notification for employee
             var employeeUser = await _context.Users.FirstOrDefaultAsync(u => u.EmployeeId == request.EmployeeId);
             if (employeeUser != null)
-            {
-                var notification = new Notification
-                {
-                    RecipientUserId = employeeUser.UserId,
-                    NotificationType = "Overtime",
-                    Title = "Overtime Rejected",
-                    Message = $"Your overtime request {request.RequestNumber} for {request.OvertimeDate} has been rejected. Reason: {dto.Reason}",
-                    RelatedEntity = "OvertimeRequest",
-                    RelatedEntityId = request.OvertimeRequestId,
-                    IsRead = false,
-                    SentDate = AppTime.Now
-                };
-                _context.Notifications.Add(notification);
-            }
+                _notifications.Notify(employeeUser.UserId, NotificationTypes.OvertimeResult, "Đơn tăng ca bị từ chối",
+                    $"Đơn tăng ca {request.RequestNumber} ngày {request.OvertimeDate:dd/MM} đã bị từ chối. Lý do: {dto.Reason}",
+                    "OvertimeRequest", request.OvertimeRequestId);
 
             var auditLog = new AuditLog
             {

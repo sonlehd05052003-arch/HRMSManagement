@@ -4,6 +4,7 @@ using HRManagement.DTOs;
 using HRManagement.DTOs.Attendances;
 using HRManagement.Models;
 using HRManagement.Services.FaceVerifications;
+using HRManagement.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Task = System.Threading.Tasks.Task;
 
@@ -15,13 +16,28 @@ namespace HRManagement.Services.Attendances
         private readonly IFaceVerificationService _faceVerificationService;
         private readonly HrmsDbContext _context;
         private readonly IMapper _mapper;
+        private readonly INotificationService _notifications;
 
-        public AttendanceService(IAttendanceRepository attendanceRepository, IFaceVerificationService faceVerificationService, HrmsDbContext context, IMapper mapper)
+        public AttendanceService(IAttendanceRepository attendanceRepository, IFaceVerificationService faceVerificationService, HrmsDbContext context, IMapper mapper, INotificationService notifications)
         {
             _attendanceRepository = attendanceRepository;
             _faceVerificationService = faceVerificationService;
             _context = context;
             _mapper = mapper;
+            _notifications = notifications;
+        }
+
+        // The employee's direct manager reviews explanations
+        private async Task NotifyExplanationSubmittedAsync(AttendanceRecord attendance)
+        {
+            if (await _notifications.GetManagerUserIdAsync(attendance.EmployeeId) is not { } managerUserId)
+                return;
+
+            var name = await _context.Employees.Where(e => e.EmployeeId == attendance.EmployeeId).Select(e => e.FullName).FirstOrDefaultAsync();
+            _notifications.Notify(managerUserId, NotificationTypes.ExplanationApproval, "Phiếu giải trình mới cần duyệt",
+                $"{name} gửi giải trình chấm công ngày {attendance.AttendanceDate:dd/MM/yyyy}.",
+                "AttendanceRecord", attendance.AttendanceId);
+            await _context.SaveChangesAsync();
         }
         public async Task<AttendanceResponseDto> CheckInAsync(int employeeId, CheckInRequestDto dto)
         {
@@ -714,6 +730,7 @@ namespace HRManagement.Services.Attendances
 
             await _attendanceRepository.UpdateAttendanceAsync(attendance);
             await _attendanceRepository.SaveChangesAsync();
+            await NotifyExplanationSubmittedAsync(attendance);
 
             var refreshed = await _attendanceRepository.GetAttendanceByIdAsync(attendance.AttendanceId) ?? attendance;
             return _mapper.Map<AttendanceResponseDto>(refreshed);
@@ -772,6 +789,7 @@ namespace HRManagement.Services.Attendances
                 dto.RequestedCheckInTime,
                 dto.RequestedCheckOutTime);
             await _attendanceRepository.SaveChangesAsync();
+            await NotifyExplanationSubmittedAsync(attendance);
             var refreshed = await _attendanceRepository.GetAttendanceByEmployeeAndDateAsync(employeeId, date) ?? attendance;
             return _mapper.Map<AttendanceResponseDto>(refreshed);
         }
@@ -813,6 +831,14 @@ namespace HRManagement.Services.Attendances
             attendance.ModifiedBy = managerId;
 
             await _attendanceRepository.UpdateAttendanceAsync(attendance);
+            if (await _notifications.GetUserIdOfEmployeeAsync(attendance.EmployeeId) is { } requesterId)
+            {
+                var approved = attendance.ExplanationStatus == "Approved";
+                _notifications.Notify(requesterId, NotificationTypes.ExplanationResult,
+                    approved ? "Giải trình chấm công đã được duyệt" : "Giải trình chấm công bị từ chối",
+                    $"Giải trình chấm công ngày {attendance.AttendanceDate:dd/MM/yyyy} đã {(approved ? "được duyệt" : "bị từ chối")}.",
+                    "AttendanceRecord", attendance.AttendanceId);
+            }
             await _attendanceRepository.SaveChangesAsync();
 
             var refreshed = await _attendanceRepository.GetAttendanceByIdAsync(attendance.AttendanceId) ?? attendance;

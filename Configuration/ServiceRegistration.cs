@@ -13,6 +13,7 @@ using HRManagement.Services.FaceVerifications;
 using HRManagement.Services.FileStorages;
 using HRManagement.Services.HRProceduces;
 using HRManagement.Services.Leaves;
+using HRManagement.Services.Notifications;
 using HRManagement.Services.Overtimes;
 using HRManagement.Services.Positions;
 using HRManagement.Services.Shifts;
@@ -87,6 +88,7 @@ namespace HRManagement.Configuration
 
             // Specialized Services
             services.AddScoped<IAuditService, AuditService>();
+            services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IExportService, ExportService>();
 
             // Resignation Request

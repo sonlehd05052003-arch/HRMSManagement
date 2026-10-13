@@ -4,6 +4,7 @@ using HRManagement.DataAcess.Interfaces;
 using HRManagement.DTOs.Payroll;
 using HRManagement.Models;
 using HRManagement.Services.Emails;
+using HRManagement.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,7 @@ namespace HRManagement.Services.Payroll
         private readonly HrmsDbContext _context;
         private readonly IMapper _mapper;
         private readonly IEmailService _emailService;
+        private readonly INotificationService _notifications;
 
         public PayrollService(
             IPayrollRepository payrollRepo,
@@ -29,7 +31,8 @@ namespace HRManagement.Services.Payroll
             TaxCalculationService taxService,
             HrmsDbContext context,
             IMapper mapper,
-            IEmailService emailService)
+            IEmailService emailService,
+            INotificationService notifications)
         {
             _payrollRepo = payrollRepo;
             _periodRepo = periodRepo;
@@ -37,6 +40,7 @@ namespace HRManagement.Services.Payroll
             _context = context;
             _mapper = mapper;
             _emailService = emailService;
+            _notifications = notifications;
         }
 
         // ── Kỳ lương ──────────────────────────────────────────────────────────
@@ -583,6 +587,7 @@ namespace HRManagement.Services.Payroll
 
             var records = await _payrollRepo.GetByPeriodAsync(periodId);
             int created = 0;
+            var newPayslipEmployees = new List<int>();
 
             foreach (var record in records)
             {
@@ -599,8 +604,19 @@ namespace HRManagement.Services.Payroll
                     GeneratedDate   = AppTime.Now,
                     IsViewed        = false,
                 });
+                newPayslipEmployees.Add(record.EmployeeId);
                 created++;
             }
+
+            // Every employee with a new payslip is told it is ready
+            var accounts = await _context.Users
+                .Where(u => u.EmployeeId != null && newPayslipEmployees.Contains(u.EmployeeId.Value) && u.IsActive)
+                .Select(u => u.UserId)
+                .ToListAsync();
+            foreach (var userId in accounts)
+                _notifications.Notify(userId, NotificationTypes.Payslip, "Phiếu lương đã có",
+                    $"Phiếu lương tháng {period.Month}/{period.Year} của bạn đã sẵn sàng.",
+                    "PayrollPeriod", periodId);
 
             await _context.SaveChangesAsync();
             return created;

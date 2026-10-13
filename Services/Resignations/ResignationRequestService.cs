@@ -2,6 +2,7 @@ using HRManagement.DTOs.LeaveRequest;
 using HRManagement.DTOs.ResignationRequest;
 using HRManagement.Models;
 using HRManagement.Services.Approvals;
+using HRManagement.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace HRManagement.Services.Resignations
@@ -10,11 +11,13 @@ namespace HRManagement.Services.Resignations
     {
         private readonly HrmsDbContext _context;
         private readonly IApprovalRouteService _approvalRouteService;
+        private readonly INotificationService _notifications;
 
-        public ResignationRequestService(HrmsDbContext context, IApprovalRouteService approvalRouteService)
+        public ResignationRequestService(HrmsDbContext context, IApprovalRouteService approvalRouteService, INotificationService notifications)
         {
             _context = context;
             _approvalRouteService = approvalRouteService;
+            _notifications = notifications;
         }
 
         public async Task<ServiceResult<ResignationRequestResponseDto>> CreateAsync(int userId, CreateResignationRequestDto dto)
@@ -92,6 +95,15 @@ namespace HRManagement.Services.Resignations
 
             _context.ResignationRequests.Add(request);
             await _context.SaveChangesAsync();
+
+            // After the save, so the notification points at the request's real id
+            if (approverId.HasValue)
+            {
+                _notifications.Notify(approverId.Value, NotificationTypes.ResignationApproval, "Đơn xin thôi việc mới cần duyệt",
+                    $"{employee.FullName} gửi đơn xin thôi việc {requestNumber}, ngày làm việc cuối dự kiến {request.ExpectedLastWorkingDate:dd/MM/yyyy}.",
+                    "ResignationRequest", request.ResignationRequestId);
+                await _context.SaveChangesAsync();
+            }
 
             var responseDto = await BuildDto(request, incompleteTaskCount);
             return ServiceResult<ResignationRequestResponseDto>.Ok("RR-OK",
@@ -201,6 +213,11 @@ namespace HRManagement.Services.Resignations
             request.ReviewedBy = userId;
             request.ReviewerComments = dto.Comments;
 
+            if (await _notifications.GetUserIdOfEmployeeAsync(request.EmployeeId) is { } requesterId)
+                _notifications.Notify(requesterId, NotificationTypes.ResignationResult, "Đơn xin thôi việc đã được duyệt",
+                    $"Đơn xin thôi việc {request.RequestNumber} đã được duyệt. HR sẽ liên hệ để làm thủ tục.",
+                    "ResignationRequest", request.ResignationRequestId);
+
             await _context.SaveChangesAsync();
 
             return ServiceResult<string>.Ok("RR-OK", "Đã phê duyệt đơn xin thôi việc. HR có thể tạo thủ tục thôi việc.", null);
@@ -224,6 +241,11 @@ namespace HRManagement.Services.Resignations
             request.ReviewedDate = AppTime.Now;
             request.ReviewedBy = userId;
             request.RejectionReason = dto.RejectionReason;
+
+            if (await _notifications.GetUserIdOfEmployeeAsync(request.EmployeeId) is { } requesterId)
+                _notifications.Notify(requesterId, NotificationTypes.ResignationResult, "Đơn xin thôi việc bị từ chối",
+                    $"Đơn xin thôi việc {request.RequestNumber} đã bị từ chối. Lý do: {dto.RejectionReason}",
+                    "ResignationRequest", request.ResignationRequestId);
 
             await _context.SaveChangesAsync();
 
