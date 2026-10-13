@@ -1,3 +1,4 @@
+using HRManagement.Services.Employees;
 using HRManagement.Authorization;
 using HRManagement.DTOs;
 using HRManagement.Models;
@@ -142,19 +143,38 @@ namespace HRManagement.Controllers
             stats.PendingLeaveRequests = await _context.LeaveRequests.CountAsync(r => r.Status == "Pending");
 
             // 4. Upcoming Events
-            var upcomingProbation = await _context.Employees
-                .Where(e => e.EmploymentStatus == "Active" && e.JoinDate.AddMonths(2) >= today && e.JoinDate.AddMonths(2) <= today.AddDays(30))
+            // Probation ends: from active probation contracts; employees without any contract on file fall back
+            // to the usual two months after joining
+            var probationContracts = await _context.EmployeeContracts
+                .Where(c => c.Status == ContractStatuses.Active && c.ContractType == ContractTypes.Probation
+                            && c.EndDate.HasValue && c.EndDate >= today && c.EndDate <= today.AddDays(30))
+                .Select(c => new UpcomingEventDto
+                {
+                    EmployeeId = c.EmployeeId,
+                    EmployeeName = c.Employee.FullName,
+                    Date = c.EndDate!.Value,
+                    Detail = ContractTypes.Probation
+                })
+                .ToListAsync();
+
+            var probationByJoinDate = await _context.Employees
+                .Where(e => e.EmploymentStatus == "Active" && !e.EmployeeContracts.Any()
+                            && e.JoinDate.AddMonths(2) >= today && e.JoinDate.AddMonths(2) <= today.AddDays(30))
                 .Select(e => new UpcomingEventDto
                 {
                     EmployeeId = e.EmployeeId,
                     EmployeeName = e.FullName,
                     Date = e.JoinDate.AddMonths(2),
-                    Detail = "End of 2-month probation"
+                    Detail = ContractTypes.Probation
                 })
                 .ToListAsync();
 
+            var upcomingProbation = probationContracts.Concat(probationByJoinDate).OrderBy(e => e.Date).ToList();
+
             var upcomingRenewals = await _context.EmployeeContracts
-                .Where(c => c.EndDate.HasValue && c.EndDate >= today && c.EndDate <= today.AddDays(30))
+                .Where(c => c.Status == ContractStatuses.Active && c.ContractType != ContractTypes.Probation
+                            && c.EndDate.HasValue && c.EndDate >= today && c.EndDate <= today.AddDays(30))
+                .OrderBy(c => c.EndDate)
                 .Select(c => new UpcomingEventDto
                 {
                     EmployeeId = c.EmployeeId,

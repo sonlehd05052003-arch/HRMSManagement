@@ -10,7 +10,7 @@ using Task = System.Threading.Tasks.Task;
 namespace HRManagement.Services.Audits
 {
     /// <summary>
-    /// Writes an AuditLogs row for every insert, update or delete of the sensitive tables below (pay, attendance,
+    /// Writes an AuditLogs row for every insert, update or delete of the sensitive tables below (pay, attendance, contracts,
     /// leave balances, employees, roles, settings), with who did it, from where, and the values before and after.
     /// Services do not have to remember to call anything.
     /// </summary>
@@ -20,7 +20,7 @@ namespace HRManagement.Services.Audits
         {
             typeof(PayrollPeriod), typeof(PayrollRecord), typeof(PayrollAllowance), typeof(PayrollDeduction),
             typeof(PayrollPolicy), typeof(AttendanceRecord), typeof(LeaveBalance), typeof(Employee),
-            typeof(Role), typeof(SystemSetting)
+            typeof(Role), typeof(SystemSetting), typeof(EmployeeContract)
         };
 
         private sealed record PendingAudit(EntityEntry Entry, int CompanyId, string Action, string? OldValues, string? NewValues);

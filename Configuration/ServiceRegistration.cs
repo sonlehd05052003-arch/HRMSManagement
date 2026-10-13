@@ -63,6 +63,7 @@ namespace HRManagement.Configuration
             services.AddScoped<IEmployeeService, EmployeeService>();
             services.AddScoped<ICloudinaryService, CloudinaryService>();
             services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
+            services.AddScoped<IEmployeeContractService, EmployeeContractService>();
             // Email: services enqueue through QueuedEmailService; Hangfire runs EmailService (SMTP) in the background
             services.AddScoped<EmailService>();
             services.AddScoped<IEmailService, QueuedEmailService>();
