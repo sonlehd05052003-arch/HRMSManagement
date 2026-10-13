@@ -12,9 +12,42 @@ namespace HRManagement.Controllers
     public class EmployeeController : ControllerBase
     {
         private readonly IEmployeeService _employeeService;
-        public EmployeeController(IEmployeeService employeeService)
+        private readonly IEmployeeImportService _importService;
+        public EmployeeController(IEmployeeService employeeService, IEmployeeImportService importService)
         {
             _employeeService = employeeService;
+            _importService = importService;
+        }
+
+        [HttpGet("import-template")]
+        [RequirePermission("Employee.Manage")]
+        public async Task<IActionResult> GetImportTemplate()
+        {
+            var bytes = await _importService.BuildTemplateAsync();
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "mau-nhap-nhan-vien.xlsx");
+        }
+
+        /// <summary>Checks an Excel file of employees (dryRun) or adds them all; nothing is added while any row has an error.</summary>
+        [HttpPost("import")]
+        [RequirePermission("Employee.Manage")]
+        [RequestSizeLimit(5 * 1024 * 1024)]
+        public async Task<IActionResult> Import(IFormFile file, [FromQuery] bool dryRun = true)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "Chưa chọn file." });
+            if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "Chỉ nhận file .xlsx." });
+
+            var userId = int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : (int?)null;
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                return Ok(await _importService.ImportAsync(stream, dryRun, userId));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
         [HttpGet]
         public async Task<IActionResult> GetAllEmployees()

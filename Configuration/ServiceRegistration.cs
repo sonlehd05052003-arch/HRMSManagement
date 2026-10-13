@@ -62,6 +62,7 @@ namespace HRManagement.Configuration
             services.AddScoped<ICompanyService, CompanyService>();
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IEmployeeService, EmployeeService>();
+            services.AddScoped<IEmployeeImportService, EmployeeImportService>();
             services.AddScoped<ICloudinaryService, CloudinaryService>();
             services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
             services.AddScoped<IEmployeeContractService, EmployeeContractService>();
