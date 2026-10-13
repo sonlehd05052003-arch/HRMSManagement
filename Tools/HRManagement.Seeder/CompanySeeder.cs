@@ -316,9 +316,9 @@ namespace HRManagement.Seeder
             return new Employee
             {
                 EmployeeCode = code,
-                // The app stores the given name as FirstName and family + middle name as LastName
-                FirstName = given,
-                LastName = $"{family} {middle}",
+                // As in the employee form: FirstName holds family + middle name, LastName the given name
+                FirstName = $"{family} {middle}",
+                LastName = given,
                 Email = email,
                 Phone = $"09{rng.Next(10_000_000, 99_999_999)}",
                 Gender = female ? "Female" : "Male",

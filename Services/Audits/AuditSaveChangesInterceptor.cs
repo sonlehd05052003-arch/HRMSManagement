@@ -93,7 +93,8 @@ namespace HRManagement.Services.Audits
                 switch (entry.State)
                 {
                     case EntityState.Added:
-                        audits.Add(new PendingAudit(entry, scoped.CompanyId, "INSERT", null, Serialize(entry, p => p.CurrentValue)));
+                        // Values are read after the save, when the generated id is known
+                        audits.Add(new PendingAudit(entry, scoped.CompanyId, "INSERT", null, null));
                         break;
                     case EntityState.Deleted:
                         audits.Add(new PendingAudit(entry, scoped.CompanyId, "DELETE", Serialize(entry, p => p.OriginalValue), null));
@@ -134,7 +135,7 @@ namespace HRManagement.Services.Audits
                     RecordId = PrimaryKey(audit.Entry),
                     UserId = userId,
                     OldValues = audit.OldValues,
-                    NewValues = audit.NewValues,
+                    NewValues = audit.Action == "INSERT" ? Serialize(audit.Entry, p => p.CurrentValue) : audit.NewValues,
                     ActionDate = now,
                     Ipaddress = ip
                 });

@@ -173,7 +173,7 @@ namespace HRManagement.Services.Companies
             await _emailService.SendAsync(
                 adminEmail,
                 "Tài khoản quản trị HR System của công ty bạn đã được tạo",
-                BuildAdminWelcomeEmail(company.CompanyName, dto.Admin.LastName, dto.Admin.FirstName, username, tempPassword));
+                BuildAdminWelcomeEmail(company.CompanyName, $"{dto.Admin.FirstName.Trim()} {dto.Admin.LastName.Trim()}", username, tempPassword));
 
             _logger.LogInformation("Created company {CompanyId} ({CompanyCode}) with admin {Username}.", companyId, code, username);
 
@@ -297,9 +297,9 @@ namespace HRManagement.Services.Companies
             <p>Mọi phiên đăng nhập cũ đã bị đăng xuất. <b>Vui lòng đăng nhập và đổi mật khẩu ngay.</b></p>
             <p>Nếu bạn không yêu cầu việc này, hãy liên hệ quản trị viên hệ thống.</p>";
 
-        private static string BuildAdminWelcomeEmail(string companyName, string lastName, string firstName, string username, string tempPassword) =>
+        private static string BuildAdminWelcomeEmail(string companyName, string fullName, string username, string tempPassword) =>
             $@"<h3>Chào mừng {companyName} đến với HR System</h3>
-            <p>Xin chào {lastName} {firstName},</p>
+            <p>Xin chào {fullName},</p>
             <p>Công ty của bạn đã được khởi tạo trên hệ thống. Tài khoản quản trị (ADMIN) của bạn:</p>
             <ul>
                 <li><b>Username:</b> {username}</li>

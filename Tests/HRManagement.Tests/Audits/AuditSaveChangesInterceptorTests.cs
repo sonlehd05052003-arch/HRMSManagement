@@ -66,6 +66,7 @@ namespace HRManagement.Tests.Audits
             Assert.Equal(UserId, log.UserId);
             Assert.Equal(CompanyId, log.CompanyId);
             Assert.Null(log.OldValues);
+            Assert.Equal(id, JsonDocument.Parse(log.NewValues!).RootElement.GetProperty("BalanceId").GetInt32());
         }
 
         [Fact]

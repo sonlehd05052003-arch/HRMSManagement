@@ -127,6 +127,8 @@ namespace HRManagement.Tests.Employees
             Assert.Null(added[2].ManagerId);
             Assert.All(added, e =>
             {
+                Assert.Equal("Nguyễn Văn", e.FirstName);
+                Assert.Equal("An", e.LastName);
                 Assert.Equal("Active", e.EmploymentStatus);
                 Assert.Equal("Full-Time", e.EmploymentType);
                 Assert.Equal("Male", e.Gender);

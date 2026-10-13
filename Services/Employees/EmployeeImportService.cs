@@ -29,6 +29,7 @@ namespace HRManagement.Services.Employees
         private const string SheetName = "NhanVien";
 
         // Column order of the template; the header row is row 1, data starts at row 2
+        // Names follow the employee form: FirstName is the family + middle name, LastName the given name
         private static readonly string[] Headers =
         {
             "Mã NV (để trống: tự sinh)", "Họ và tên đệm *", "Tên *", "Email *", "Số điện thoại", "Giới tính (Nam/Nữ/Khác)",
@@ -149,8 +150,8 @@ namespace HRManagement.Services.Employees
 
             foreach (var row in rows)
             {
-                if (row.LastName == "") row.Errors.Add("Thiếu họ và tên đệm.");
-                if (row.FirstName == "") row.Errors.Add("Thiếu tên.");
+                if (row.FirstName == "") row.Errors.Add("Thiếu họ và tên đệm.");
+                if (row.LastName == "") row.Errors.Add("Thiếu tên.");
                 if (row.Email == "") row.Errors.Add("Thiếu email.");
                 else if (!MailAddress.TryCreate(row.Email, out _)) row.Errors.Add($"Email '{row.Email}' không hợp lệ.");
                 else if (existingEmails.Contains(row.Email)) row.Errors.Add($"Email '{row.Email}' đã có nhân viên khác dùng.");
@@ -264,8 +265,8 @@ namespace HRManagement.Services.Employees
                 {
                     RowNumber = r,
                     Code = Text(cells[0]),
-                    LastName = Text(cells[1]) ?? "",
-                    FirstName = Text(cells[2]) ?? "",
+                    FirstName = Text(cells[1]) ?? "",
+                    LastName = Text(cells[2]) ?? "",
                     Email = Text(cells[3]) ?? "",
                     Phone = Text(cells[4]),
                     DepartmentCode = Text(cells[7]),
