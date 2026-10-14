@@ -600,7 +600,7 @@ namespace HRManagement.Services.HRProceduces
             }
 
             var salaryLine = newSalary.HasValue
-                ? $"<li><b>Mức lương mới:</b> {newSalary.Value:N0} VND</li>"
+                ? $"<li><b>Mức lương mới:</b> {newSalary.Value.ToString("N0", new System.Globalization.CultureInfo("vi-VN"))} VND</li>"
                 : string.Empty;
 
             var roleNote = isDowngradeToEmployee

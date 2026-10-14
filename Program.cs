@@ -1,3 +1,4 @@
+using System.Globalization;
 using Hangfire;
 using HRManagement;
 using HRManagement.Authorization;
@@ -38,6 +39,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+
+// Numbers and dates in settings are stored and parsed the same way whatever the server locale
+// ("0.5" must not become 5 on a Vietnamese Windows); text shown to people formats with vi-VN explicitly.
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 

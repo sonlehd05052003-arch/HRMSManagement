@@ -1719,17 +1719,13 @@ namespace HRManagement.Migrations
                         .HasColumnName("EmployeeID");
 
                     b.Property<decimal?>("GrossPay")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("decimal(21, 2)")
-                        .HasComputedColumnSql("((([BaseSalary]+[TotalAllowances])+[OvertimePay])+[BonusAmount])", true);
+                        .HasColumnType("decimal(21, 2)");
 
                     b.Property<decimal>("InsuranceAmount")
                         .HasColumnType("decimal(18, 2)");
 
                     b.Property<decimal?>("NetPay")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("decimal(24, 2)")
-                        .HasComputedColumnSql("(((((([BaseSalary]+[TotalAllowances])+[OvertimePay])+[BonusAmount])-[TotalDeductions])-[TaxAmount])-[InsuranceAmount])", true);
+                        .HasColumnType("decimal(24, 2)");
 
                     b.Property<decimal>("OvertimePay")
                         .HasColumnType("decimal(18, 2)");

@@ -1,3 +1,4 @@
+using System.Globalization;
 using HRManagement.Authorization;
 using HRManagement.DTOs.SystemSettings;
 using HRManagement.Models;
@@ -144,17 +145,17 @@ namespace HRManagement.Controllers
             var dto = new PayrollCalculationSettingsDto(); // defaults already set
             foreach (var s in settings)
             {
-                if (s.SettingKey == "Payroll.Calc.BhxhRate"              && decimal.TryParse(s.SettingValue, out var v1))  dto.BhxhRate             = v1;
-                if (s.SettingKey == "Payroll.Calc.BhytRate"              && decimal.TryParse(s.SettingValue, out var v2))  dto.BhytRate             = v2;
-                if (s.SettingKey == "Payroll.Calc.BhtnRate"              && decimal.TryParse(s.SettingValue, out var v3))  dto.BhtnRate             = v3;
-                if (s.SettingKey == "Payroll.Calc.InsuranceCap"          && decimal.TryParse(s.SettingValue, out var v4))  dto.InsuranceCap         = v4;
+                if (s.SettingKey == "Payroll.Calc.BhxhRate"              && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v1))  dto.BhxhRate             = v1;
+                if (s.SettingKey == "Payroll.Calc.BhytRate"              && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v2))  dto.BhytRate             = v2;
+                if (s.SettingKey == "Payroll.Calc.BhtnRate"              && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v3))  dto.BhtnRate             = v3;
+                if (s.SettingKey == "Payroll.Calc.InsuranceCap"          && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v4))  dto.InsuranceCap         = v4;
                 if (s.SettingKey == "Payroll.Calc.InsuranceBaseMode")                                                       dto.InsuranceBaseMode    = s.SettingValue ?? "Gross";
-                if (s.SettingKey == "Payroll.Calc.InsuranceFixedBase"    && decimal.TryParse(s.SettingValue, out var v6))  dto.InsuranceFixedBase   = v6;
-                if (s.SettingKey == "Payroll.Calc.PersonalDeduction"     && decimal.TryParse(s.SettingValue, out var v7))  dto.PersonalDeduction    = v7;
-                if (s.SettingKey == "Payroll.Calc.DependentDeduction"    && decimal.TryParse(s.SettingValue, out var v8))  dto.DependentDeduction   = v8;
-                if (s.SettingKey == "Payroll.Calc.OtWeekdayMultiplier"   && decimal.TryParse(s.SettingValue, out var v9))  dto.OtWeekdayMultiplier  = v9;
-                if (s.SettingKey == "Payroll.Calc.OtWeekendMultiplier"   && decimal.TryParse(s.SettingValue, out var v10)) dto.OtWeekendMultiplier  = v10;
-                if (s.SettingKey == "Payroll.Calc.OtHolidayMultiplier"   && decimal.TryParse(s.SettingValue, out var v11)) dto.OtHolidayMultiplier  = v11;
+                if (s.SettingKey == "Payroll.Calc.InsuranceFixedBase"    && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v6))  dto.InsuranceFixedBase   = v6;
+                if (s.SettingKey == "Payroll.Calc.PersonalDeduction"     && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v7))  dto.PersonalDeduction    = v7;
+                if (s.SettingKey == "Payroll.Calc.DependentDeduction"    && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v8))  dto.DependentDeduction   = v8;
+                if (s.SettingKey == "Payroll.Calc.OtWeekdayMultiplier"   && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v9))  dto.OtWeekdayMultiplier  = v9;
+                if (s.SettingKey == "Payroll.Calc.OtWeekendMultiplier"   && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v10)) dto.OtWeekendMultiplier  = v10;
+                if (s.SettingKey == "Payroll.Calc.OtHolidayMultiplier"   && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v11)) dto.OtHolidayMultiplier  = v11;
             }
             return Ok(dto);
         }
@@ -174,17 +175,17 @@ namespace HRManagement.Controllers
             if (dto.OtWeekendMultiplier <= 0)                    return BadRequest(new { message = "Hệ số OT cuối tuần phải lớn hơn 0." });
             if (dto.OtHolidayMultiplier <= 0)                    return BadRequest(new { message = "Hệ số OT ngày lễ phải lớn hơn 0." });
 
-            await UpdateOrInsertSetting("Payroll.Calc.BhxhRate",              dto.BhxhRate.ToString(),              "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.BhytRate",              dto.BhytRate.ToString(),              "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.BhtnRate",              dto.BhtnRate.ToString(),              "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.InsuranceCap",          dto.InsuranceCap.ToString(),          "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.BhxhRate",              dto.BhxhRate.ToString(CultureInfo.InvariantCulture),              "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.BhytRate",              dto.BhytRate.ToString(CultureInfo.InvariantCulture),              "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.BhtnRate",              dto.BhtnRate.ToString(CultureInfo.InvariantCulture),              "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.InsuranceCap",          dto.InsuranceCap.ToString(CultureInfo.InvariantCulture),          "Payroll");
             await UpdateOrInsertSetting("Payroll.Calc.InsuranceBaseMode",     dto.InsuranceBaseMode,                "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.InsuranceFixedBase",    dto.InsuranceFixedBase.ToString(),    "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.PersonalDeduction",     dto.PersonalDeduction.ToString(),     "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.DependentDeduction",    dto.DependentDeduction.ToString(),    "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.OtWeekdayMultiplier",   dto.OtWeekdayMultiplier.ToString(),   "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.OtWeekendMultiplier",   dto.OtWeekendMultiplier.ToString(),   "Payroll");
-            await UpdateOrInsertSetting("Payroll.Calc.OtHolidayMultiplier",   dto.OtHolidayMultiplier.ToString(),   "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.InsuranceFixedBase",    dto.InsuranceFixedBase.ToString(CultureInfo.InvariantCulture),    "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.PersonalDeduction",     dto.PersonalDeduction.ToString(CultureInfo.InvariantCulture),     "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.DependentDeduction",    dto.DependentDeduction.ToString(CultureInfo.InvariantCulture),    "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.OtWeekdayMultiplier",   dto.OtWeekdayMultiplier.ToString(CultureInfo.InvariantCulture),   "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.OtWeekendMultiplier",   dto.OtWeekendMultiplier.ToString(CultureInfo.InvariantCulture),   "Payroll");
+            await UpdateOrInsertSetting("Payroll.Calc.OtHolidayMultiplier",   dto.OtHolidayMultiplier.ToString(CultureInfo.InvariantCulture),   "Payroll");
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật cấu hình tính lương thành công." });
         }

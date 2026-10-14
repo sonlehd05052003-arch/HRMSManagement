@@ -632,13 +632,10 @@ public partial class HrmsDbContext : DbContext
             entity.Property(e => e.BonusAmount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CalculatedDate).HasColumnType("datetime");
             entity.Property(e => e.EmployeeId).HasColumnName("EmployeeID");
-            entity.Property(e => e.GrossPay)
-                .HasComputedColumnSql("((([BaseSalary]+[TotalAllowances])+[OvertimePay])+[BonusAmount])", true)
-                .HasColumnType("decimal(21, 2)");
+            // Stored as calculated by PayrollService: pay for the days worked, not the full base salary
+            entity.Property(e => e.GrossPay).HasColumnType("decimal(21, 2)");
             entity.Property(e => e.InsuranceAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.NetPay)
-                .HasComputedColumnSql("(((((([BaseSalary]+[TotalAllowances])+[OvertimePay])+[BonusAmount])-[TotalDeductions])-[TaxAmount])-[InsuranceAmount])", true)
-                .HasColumnType("decimal(24, 2)");
+            entity.Property(e => e.NetPay).HasColumnType("decimal(24, 2)");
             entity.Property(e => e.OvertimePay).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.PeriodId).HasColumnName("PeriodID");
             entity.Property(e => e.Status)

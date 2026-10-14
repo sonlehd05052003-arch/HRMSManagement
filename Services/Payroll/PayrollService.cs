@@ -1,3 +1,4 @@
+using System.Globalization;
 using AutoMapper;
 using ClosedXML.Excel;
 using HRManagement.DataAcess.Interfaces;
@@ -134,17 +135,17 @@ namespace HRManagement.Services.Payroll
             var cfg = new HRManagement.DTOs.SystemSettings.PayrollCalculationSettingsDto();
             foreach (var s in rows)
             {
-                if (s.SettingKey == "Payroll.Calc.BhxhRate"              && decimal.TryParse(s.SettingValue, out var v1))  cfg.BhxhRate             = v1;
-                if (s.SettingKey == "Payroll.Calc.BhytRate"              && decimal.TryParse(s.SettingValue, out var v2))  cfg.BhytRate             = v2;
-                if (s.SettingKey == "Payroll.Calc.BhtnRate"              && decimal.TryParse(s.SettingValue, out var v3))  cfg.BhtnRate             = v3;
-                if (s.SettingKey == "Payroll.Calc.InsuranceCap"          && decimal.TryParse(s.SettingValue, out var v4))  cfg.InsuranceCap         = v4;
+                if (s.SettingKey == "Payroll.Calc.BhxhRate"              && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v1))  cfg.BhxhRate             = v1;
+                if (s.SettingKey == "Payroll.Calc.BhytRate"              && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v2))  cfg.BhytRate             = v2;
+                if (s.SettingKey == "Payroll.Calc.BhtnRate"              && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v3))  cfg.BhtnRate             = v3;
+                if (s.SettingKey == "Payroll.Calc.InsuranceCap"          && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v4))  cfg.InsuranceCap         = v4;
                 if (s.SettingKey == "Payroll.Calc.InsuranceBaseMode")                                                       cfg.InsuranceBaseMode    = s.SettingValue ?? "Gross";
-                if (s.SettingKey == "Payroll.Calc.InsuranceFixedBase"    && decimal.TryParse(s.SettingValue, out var v6))  cfg.InsuranceFixedBase   = v6;
-                if (s.SettingKey == "Payroll.Calc.PersonalDeduction"     && decimal.TryParse(s.SettingValue, out var v7))  cfg.PersonalDeduction    = v7;
-                if (s.SettingKey == "Payroll.Calc.DependentDeduction"    && decimal.TryParse(s.SettingValue, out var v8))  cfg.DependentDeduction   = v8;
-                if (s.SettingKey == "Payroll.Calc.OtWeekdayMultiplier"   && decimal.TryParse(s.SettingValue, out var v9))  cfg.OtWeekdayMultiplier  = v9;
-                if (s.SettingKey == "Payroll.Calc.OtWeekendMultiplier"   && decimal.TryParse(s.SettingValue, out var v10)) cfg.OtWeekendMultiplier  = v10;
-                if (s.SettingKey == "Payroll.Calc.OtHolidayMultiplier"   && decimal.TryParse(s.SettingValue, out var v11)) cfg.OtHolidayMultiplier  = v11;
+                if (s.SettingKey == "Payroll.Calc.InsuranceFixedBase"    && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v6))  cfg.InsuranceFixedBase   = v6;
+                if (s.SettingKey == "Payroll.Calc.PersonalDeduction"     && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v7))  cfg.PersonalDeduction    = v7;
+                if (s.SettingKey == "Payroll.Calc.DependentDeduction"    && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v8))  cfg.DependentDeduction   = v8;
+                if (s.SettingKey == "Payroll.Calc.OtWeekdayMultiplier"   && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v9))  cfg.OtWeekdayMultiplier  = v9;
+                if (s.SettingKey == "Payroll.Calc.OtWeekendMultiplier"   && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v10)) cfg.OtWeekendMultiplier  = v10;
+                if (s.SettingKey == "Payroll.Calc.OtHolidayMultiplier"   && decimal.TryParse(s.SettingValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var v11)) cfg.OtHolidayMultiplier  = v11;
             }
             return cfg;
         }
@@ -384,7 +385,8 @@ namespace HRManagement.Services.Payroll
                 Description = dto.Description
             });
             record.TotalAllowances += dto.Amount;
-            record.NetPay += dto.Amount; // Tăng thực lĩnh
+            record.GrossPay += dto.Amount;
+            record.NetPay += dto.Amount;
             await _payrollRepo.UpdateAsync(record);
             return _mapper.Map<PayrollRecordDto>(record);
         }
@@ -396,6 +398,7 @@ namespace HRManagement.Services.Payroll
             if (item != null)
             {
                 record.TotalAllowances -= item.Amount;
+                record.GrossPay -= item.Amount;
                 record.NetPay -= item.Amount;
                 _context.PayrollAllowances.Remove(item);
                 await _payrollRepo.UpdateAsync(record);
@@ -437,6 +440,7 @@ namespace HRManagement.Services.Payroll
             var record = await _payrollRepo.GetByIdAsync(payrollRecordId) ?? throw new KeyNotFoundException();
             var diff = bonusAmount - record.BonusAmount;
             record.BonusAmount = bonusAmount;
+            record.GrossPay += diff;
             record.NetPay += diff;
             await _payrollRepo.UpdateAsync(record);
             return _mapper.Map<PayrollRecordDto>(record);
@@ -833,7 +837,9 @@ namespace HRManagement.Services.Payroll
                     ? rec.WorkingHours.Value
                     : stdHours;
 
-                actualDays += workedHours / stdHours;
+                // A day counts once at most: check-out minus check-in includes the lunch break and early arrival,
+                // and time beyond the shift is paid through approved overtime requests
+                actualDays += Math.Min(workedHours / stdHours, 1m);
             }
 
             // Bước 4: Cộng ngày nghỉ có lương

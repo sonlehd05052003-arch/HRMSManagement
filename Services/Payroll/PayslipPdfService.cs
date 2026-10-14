@@ -87,8 +87,8 @@ namespace HRManagement.Services.Payroll
                             });
 
                             EmpRow(t, "Mã Nhân Viên",  record.Employee.EmployeeCode,               "Lương đóng BHBB",    Fmt(record.BaseSalary));
-                            EmpRow(t, "Họ Và Tên",     record.Employee.FullName,                   "Ngày công đi làm",   record.ActualWorkingDays.ToString("N1"));
-                            EmpRow(t, "Chức Danh",     record.Employee.Position?.PositionName ?? "", "Ngày công chuẩn",  record.WorkingDays.ToString("N1"));
+                            EmpRow(t, "Họ Và Tên",     record.Employee.FullName,                   "Ngày công đi làm",   record.ActualWorkingDays.ToString("N1", new CultureInfo("vi-VN")));
+                            EmpRow(t, "Chức Danh",     record.Employee.Position?.PositionName ?? "", "Ngày công chuẩn",  record.WorkingDays.ToString("N1", new CultureInfo("vi-VN")));
                         });
 
                         col.Item().Height(6);
