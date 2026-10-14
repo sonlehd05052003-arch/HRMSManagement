@@ -86,7 +86,9 @@ builder.Services.AddCors(options =>
 
         policy.AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials()
+              // Lets the client read the file name of a download
+              .WithExposedHeaders("Content-Disposition");
     });
 });
 

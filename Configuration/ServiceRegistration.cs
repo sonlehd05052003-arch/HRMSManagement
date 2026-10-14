@@ -17,6 +17,7 @@ using HRManagement.Services.Leaves;
 using HRManagement.Services.Notifications;
 using HRManagement.Services.Overtimes;
 using HRManagement.Services.Positions;
+using HRManagement.Services.Reports;
 using HRManagement.Services.Shifts;
 using HRManagement.Services.Users;
 using HRManagement.Services.Tasks;
@@ -63,6 +64,7 @@ namespace HRManagement.Configuration
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IEmployeeService, EmployeeService>();
             services.AddScoped<IEmployeeImportService, EmployeeImportService>();
+            services.AddScoped<IReportService, ReportService>();
             services.AddScoped<ICloudinaryService, CloudinaryService>();
             services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
             services.AddScoped<IEmployeeContractService, EmployeeContractService>();

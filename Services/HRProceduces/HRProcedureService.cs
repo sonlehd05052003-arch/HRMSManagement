@@ -434,7 +434,7 @@ namespace HRManagement.Services.HRProceduces
                     break;
 
                 case "termination":
-                    employee.EmploymentStatus = "Termination";
+                    employee.EmploymentStatus = "Terminated";
                     employee.ResignationDate  = procedure.EffectiveDate;
                     await DeactivateUserAccountAsync(employee);
                     break;
