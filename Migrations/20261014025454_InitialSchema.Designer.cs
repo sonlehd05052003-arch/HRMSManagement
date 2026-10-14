@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HRManagement.Migrations
 {
     [DbContext(typeof(HrmsDbContext))]
-    [Migration("20260327064157_updateDB")]
-    partial class updateDB
+    [Migration("20261014025454_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,6 +33,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("LogID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LogId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int")
@@ -101,6 +105,8 @@ namespace HRManagement.Migrations
                     b.HasKey("LogId")
                         .HasName("PK__Attendan__5E5499A8");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("EmployeeId");
 
                     b.HasIndex("ShiftId");
@@ -146,6 +152,10 @@ namespace HRManagement.Migrations
                     b.Property<bool?>("CheckOutVerified")
                         .HasColumnType("bit");
 
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
+
                     b.Property<DateTime>("CreatedDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
@@ -159,6 +169,29 @@ namespace HRManagement.Migrations
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int")
                         .HasColumnName("EmployeeID");
+
+                    b.Property<int?>("ExplanationLeaveTypeId")
+                        .HasColumnType("int")
+                        .HasColumnName("ExplanationLeaveTypeID");
+
+                    b.Property<string>("ExplanationMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<TimeSpan?>("ExplanationRequestedCheckInTime")
+                        .HasColumnType("time");
+
+                    b.Property<TimeSpan?>("ExplanationRequestedCheckOutTime")
+                        .HasColumnType("time");
+
+                    b.Property<string>("ExplanationResponse")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExplanationStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExplanationType")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<bool?>("IsLocked")
                         .HasColumnType("bit");
@@ -183,7 +216,7 @@ namespace HRManagement.Migrations
 
                     b.Property<decimal?>("OvertimeHours")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(4, 2)")
+                        .HasColumnType("decimal(6, 2)")
                         .HasDefaultValue(0m);
 
                     b.Property<string>("Remarks")
@@ -205,16 +238,18 @@ namespace HRManagement.Migrations
                         .HasDefaultValue("Present");
 
                     b.Property<decimal?>("WorkingHours")
-                        .HasColumnType("decimal(4, 2)");
+                        .HasColumnType("decimal(6, 2)");
 
                     b.HasKey("AttendanceId")
                         .HasName("PK__Attendan__8B69263C44FB91E1");
 
+                    b.HasIndex("ExplanationLeaveTypeId");
+
                     b.HasIndex("ShiftId");
 
-                    b.HasIndex(new[] { "AttendanceDate" }, "IX_Attendance_Date");
+                    b.HasIndex(new[] { "CompanyId", "AttendanceDate" }, "IX_AttendanceRecords_Company_Date");
 
-                    b.HasIndex(new[] { "EmployeeId", "AttendanceDate" }, "IX_Attendance_EmployeeDate");
+                    b.HasIndex(new[] { "AttendanceDate" }, "IX_Attendance_Date");
 
                     b.HasIndex(new[] { "EmployeeId", "AttendanceDate" }, "UQ_Attendance_EmployeeDate")
                         .IsUnique();
@@ -240,6 +275,10 @@ namespace HRManagement.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<string>("Ipaddress")
                         .HasMaxLength(50)
@@ -268,6 +307,8 @@ namespace HRManagement.Migrations
                     b.HasKey("AuditId")
                         .HasName("PK__AuditLog__A17F23B8E2BA6814");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex(new[] { "ActionDate" }, "IX_AuditLogs_ActionDate");
 
                     b.HasIndex(new[] { "TableName" }, "IX_AuditLogs_TableName");
@@ -275,6 +316,62 @@ namespace HRManagement.Migrations
                     b.HasIndex(new[] { "UserId" }, "IX_AuditLogs_UserID");
 
                     b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.Company", b =>
+                {
+                    b.Property<int>("CompanyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CompanyId"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("CompanyCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TaxCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("CompanyId");
+
+                    b.HasIndex("CompanyCode")
+                        .IsUnique();
+
+                    b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("HRManagement.Models.Department", b =>
@@ -285,6 +382,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("DepartmentID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DepartmentId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -334,7 +435,7 @@ namespace HRManagement.Migrations
 
                     b.HasIndex("ParentDepartmentId");
 
-                    b.HasIndex(new[] { "DepartmentCode" }, "UQ__Departme__6EA8896D0227EAE3")
+                    b.HasIndex(new[] { "CompanyId", "DepartmentCode" }, "UQ__Departme__6EA8896D0227EAE3")
                         .IsUnique();
 
                     b.ToTable("Departments");
@@ -359,6 +460,10 @@ namespace HRManagement.Migrations
                     b.Property<string>("City")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<string>("Country")
                         .HasMaxLength(50)
@@ -419,6 +524,9 @@ namespace HRManagement.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<decimal?>("InsuranceSalary")
+                        .HasColumnType("decimal(18, 2)");
+
                     b.Property<DateOnly>("JoinDate")
                         .HasColumnType("date");
 
@@ -436,6 +544,9 @@ namespace HRManagement.Migrations
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<int>("NumberOfDependents")
+                        .HasColumnType("int");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
@@ -461,10 +572,10 @@ namespace HRManagement.Migrations
 
                     b.HasIndex(new[] { "EmploymentStatus" }, "IX_Employees_Status");
 
-                    b.HasIndex(new[] { "EmployeeCode" }, "UQ__Employee__1F642548E0EDEFF5")
+                    b.HasIndex(new[] { "CompanyId", "EmployeeCode" }, "UQ__Employee__1F642548E0EDEFF5")
                         .IsUnique();
 
-                    b.HasIndex(new[] { "Email" }, "UQ__Employee__A9D105349FE0388B")
+                    b.HasIndex(new[] { "CompanyId", "Email" }, "UQ__Employee__A9D105349FE0388B")
                         .IsUnique();
 
                     b.ToTable("Employees");
@@ -478,6 +589,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("ContractID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ContractId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<string>("ContractNumber")
                         .IsRequired()
@@ -525,7 +640,7 @@ namespace HRManagement.Migrations
 
                     b.HasIndex("EmployeeId");
 
-                    b.HasIndex(new[] { "ContractNumber" }, "UQ__Employee__C51D43DADFFA6EF0")
+                    b.HasIndex(new[] { "CompanyId", "ContractNumber" }, "UQ__Employee__C51D43DADFFA6EF0")
                         .IsUnique();
 
                     b.ToTable("EmployeeContracts");
@@ -539,6 +654,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("DocumentID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DocumentId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<string>("DocumentCategory")
                         .IsRequired()
@@ -592,269 +711,11 @@ namespace HRManagement.Migrations
                     b.HasKey("DocumentId")
                         .HasName("PK__Employee__1ABEEF6FC626AC31");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("EmployeeId");
 
                     b.ToTable("EmployeeDocuments");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.Evaluation", b =>
-                {
-                    b.Property<int>("EvaluationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("EvaluationID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EvaluationId"));
-
-                    b.Property<DateTime?>("AcknowledgedDate")
-                        .HasColumnType("datetime");
-
-                    b.Property<string>("AcknowledgementComments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CycleId")
-                        .HasColumnType("int")
-                        .HasColumnName("CycleID");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("int")
-                        .HasColumnName("EmployeeID");
-
-                    b.Property<decimal?>("OverallRating")
-                        .HasColumnType("decimal(3, 2)");
-
-                    b.Property<int?>("PrimaryEvaluatorId")
-                        .HasColumnType("int")
-                        .HasColumnName("PrimaryEvaluatorID");
-
-                    b.Property<int?>("SecondaryEvaluatorId")
-                        .HasColumnType("int")
-                        .HasColumnName("SecondaryEvaluatorID");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Not Started");
-
-                    b.Property<DateTime?>("SubmittedDate")
-                        .HasColumnType("datetime");
-
-                    b.Property<int>("TemplateId")
-                        .HasColumnType("int")
-                        .HasColumnName("TemplateID");
-
-                    b.HasKey("EvaluationId")
-                        .HasName("PK__Evaluati__36AE68D3349E1779");
-
-                    b.HasIndex("EmployeeId");
-
-                    b.HasIndex("PrimaryEvaluatorId");
-
-                    b.HasIndex("SecondaryEvaluatorId");
-
-                    b.HasIndex("TemplateId");
-
-                    b.HasIndex(new[] { "CycleId", "EmployeeId" }, "UQ_Evaluations")
-                        .IsUnique();
-
-                    b.ToTable("Evaluations");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationCriterion", b =>
-                {
-                    b.Property<int>("CriteriaId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("CriteriaID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CriteriaId"));
-
-                    b.Property<string>("CriteriaCategory")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("CriteriaName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TemplateId")
-                        .HasColumnType("int")
-                        .HasColumnName("TemplateID");
-
-                    b.Property<int>("Weightage")
-                        .HasColumnType("int");
-
-                    b.HasKey("CriteriaId")
-                        .HasName("PK__Evaluati__FE6ADB2D58C14D2A");
-
-                    b.HasIndex(new[] { "TemplateId", "DisplayOrder" }, "UQ_Criteria")
-                        .IsUnique();
-
-                    b.ToTable("EvaluationCriteria");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationCycle", b =>
-                {
-                    b.Property<int>("CycleId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("CycleID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CycleId"));
-
-                    b.Property<string>("ApplicableDepartments")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<string>("CycleName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CycleType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateOnly>("EvaluationPeriodEnd")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly>("EvaluationPeriodStart")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly>("ManagerEvaluationEnd")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly>("ManagerEvaluationStart")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly?>("ReviewMeetingEnd")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly?>("ReviewMeetingStart")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly>("SelfEvaluationEnd")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly>("SelfEvaluationStart")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Draft");
-
-                    b.HasKey("CycleId")
-                        .HasName("PK__Evaluati__077B24D9A63CD15C");
-
-                    b.HasIndex(new[] { "CycleName" }, "UQ__Evaluati__E08EC4DB369895DC")
-                        .IsUnique();
-
-                    b.ToTable("EvaluationCycles");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationRating", b =>
-                {
-                    b.Property<int>("RatingId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("RatingID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RatingId"));
-
-                    b.Property<int>("CriteriaId")
-                        .HasColumnType("int")
-                        .HasColumnName("CriteriaID");
-
-                    b.Property<int>("EvaluationId")
-                        .HasColumnType("int")
-                        .HasColumnName("EvaluationID");
-
-                    b.Property<string>("Evidence")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ManagerComments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("ManagerRating")
-                        .HasColumnType("decimal(3, 2)");
-
-                    b.Property<string>("SelfComments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("SelfRating")
-                        .HasColumnType("decimal(3, 2)");
-
-                    b.HasKey("RatingId")
-                        .HasName("PK__Evaluati__FCCDF85C69565A87");
-
-                    b.HasIndex("CriteriaId");
-
-                    b.HasIndex(new[] { "EvaluationId", "CriteriaId" }, "UQ_EvaluationRatings")
-                        .IsUnique();
-
-                    b.ToTable("EvaluationRatings");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationTemplate", b =>
-                {
-                    b.Property<int>("TemplateId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("TemplateID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TemplateId"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("TemplateName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("TemplateId")
-                        .HasName("PK__Evaluati__F87ADD07F22F93BD");
-
-                    b.HasIndex(new[] { "TemplateName" }, "UQ__Evaluati__A6C2DA66154EF91D")
-                        .IsUnique();
-
-                    b.ToTable("EvaluationTemplates");
                 });
 
             modelBuilder.Entity("HRManagement.Models.FaceProfile", b =>
@@ -864,6 +725,10 @@ namespace HRManagement.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FaceProfileId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -894,6 +759,8 @@ namespace HRManagement.Migrations
 
                     b.HasKey("FaceProfileId");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("EmployeeId");
 
                     b.ToTable("FaceProfiles");
@@ -913,6 +780,10 @@ namespace HRManagement.Migrations
                     b.Property<string>("CapturedImagePath")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<decimal?>("ConfidenceScore")
                         .HasColumnType("decimal(5,2)");
@@ -960,9 +831,51 @@ namespace HRManagement.Migrations
 
                     b.HasIndex("AttendanceLogId");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("EmployeeId");
 
                     b.ToTable("FaceVerificationLogs");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.Holiday", b =>
+                {
+                    b.Property<int>("HolidayId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("HolidayID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HolidayId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateOnly>("HolidayDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsPaid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("HolidayId");
+
+                    b.HasIndex(new[] { "CompanyId", "HolidayDate" }, "UQ_Holidays_Company_Date")
+                        .IsUnique();
+
+                    b.ToTable("Holidays");
                 });
 
             modelBuilder.Entity("HRManagement.Models.Hrprocedure", b =>
@@ -974,11 +887,21 @@ namespace HRManagement.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProcedureId"));
 
+                    b.Property<int?>("AppliedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("AppliedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int?>("ApprovedBy")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("ApprovedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<DateOnly>("EffectiveDate")
                         .HasColumnType("date");
@@ -990,6 +913,9 @@ namespace HRManagement.Migrations
                     b.Property<int?>("NewDepartmentId")
                         .HasColumnType("int")
                         .HasColumnName("NewDepartmentID");
+
+                    b.Property<int?>("NewManagerId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("NewPositionId")
                         .HasColumnType("int")
@@ -1040,13 +966,17 @@ namespace HRManagement.Migrations
                     b.HasKey("ProcedureId")
                         .HasName("PK__HRProced__54C2E50D0DCD81AE");
 
+                    b.HasIndex("AppliedBy");
+
                     b.HasIndex("EmployeeId");
 
                     b.HasIndex("NewDepartmentId");
 
+                    b.HasIndex("NewManagerId");
+
                     b.HasIndex("NewPositionId");
 
-                    b.HasIndex(new[] { "ProcedureNumber" }, "UQ__HRProced__AA41A753D36A3E49")
+                    b.HasIndex(new[] { "CompanyId", "ProcedureNumber" }, "UQ__HRProced__AA41A753D36A3E49")
                         .IsUnique();
 
                     b.ToTable("HRProcedures", (string)null);
@@ -1063,6 +993,10 @@ namespace HRManagement.Migrations
 
                     b.Property<decimal>("CarriedForward")
                         .HasColumnType("decimal(5, 2)");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int")
@@ -1094,6 +1028,8 @@ namespace HRManagement.Migrations
                     b.HasKey("BalanceId")
                         .HasName("PK__LeaveBal__A760D59E8B49FB3E");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("LeaveTypeId");
 
                     b.HasIndex(new[] { "EmployeeId", "LeaveTypeId", "Year" }, "UQ_LeaveBalances")
@@ -1116,6 +1052,10 @@ namespace HRManagement.Migrations
 
                     b.Property<DateTime?>("ApprovedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int")
@@ -1169,6 +1109,9 @@ namespace HRManagement.Migrations
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
 
+                    b.Property<int?>("TargetApproverId")
+                        .HasColumnType("int");
+
                     b.HasKey("LeaveRequestId")
                         .HasName("PK__LeaveReq__6094218E199159EC");
 
@@ -1178,13 +1121,15 @@ namespace HRManagement.Migrations
 
                     b.HasIndex("ReviewedBy");
 
+                    b.HasIndex("TargetApproverId");
+
                     b.HasIndex(new[] { "StartDate", "EndDate" }, "IX_LeaveRequests_Dates");
 
                     b.HasIndex(new[] { "EmployeeId" }, "IX_LeaveRequests_EmployeeID");
 
                     b.HasIndex(new[] { "Status" }, "IX_LeaveRequests_Status");
 
-                    b.HasIndex(new[] { "RequestNumber" }, "UQ__LeaveReq__9ADA6BE0F25CECE0")
+                    b.HasIndex(new[] { "CompanyId", "RequestNumber" }, "UQ__LeaveReq__9ADA6BE0F25CECE0")
                         .IsUnique();
 
                     b.ToTable("LeaveRequests");
@@ -1201,6 +1146,10 @@ namespace HRManagement.Migrations
 
                     b.Property<int>("AnnualEntitlement")
                         .HasColumnType("int");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -1246,10 +1195,62 @@ namespace HRManagement.Migrations
                     b.HasKey("LeaveTypeId")
                         .HasName("PK__LeaveTyp__43BE8FF4F7AA7C4D");
 
-                    b.HasIndex(new[] { "LeaveTypeCode" }, "UQ__LeaveTyp__A264FAEECF215F7C")
+                    b.HasIndex(new[] { "CompanyId", "LeaveTypeCode" }, "UQ__LeaveTyp__A264FAEECF215F7C")
                         .IsUnique();
 
                     b.ToTable("LeaveTypes");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.Menu", b =>
+                {
+                    b.Property<int>("MenuId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("MenuID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MenuId"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IconName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int")
+                        .HasColumnName("ParentID");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<bool>("ShowForSuperAdmin")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("MenuId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("ParentId", "DisplayOrder");
+
+                    b.ToTable("Menus");
                 });
 
             modelBuilder.Entity("HRManagement.Models.Notification", b =>
@@ -1260,6 +1261,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("NotificationID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotificationId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
@@ -1301,6 +1306,8 @@ namespace HRManagement.Migrations
                     b.HasKey("NotificationId")
                         .HasName("PK__Notifica__20CF2E3219D9C223");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex(new[] { "IsRead" }, "IX_Notifications_IsRead");
 
                     b.HasIndex(new[] { "RecipientUserId" }, "IX_Notifications_RecipientUserID");
@@ -1322,6 +1329,10 @@ namespace HRManagement.Migrations
 
                     b.Property<DateTime?>("ApprovedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int")
@@ -1367,6 +1378,9 @@ namespace HRManagement.Migrations
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
 
+                    b.Property<int?>("TargetApproverId")
+                        .HasColumnType("int");
+
                     b.Property<string>("TaskDescription")
                         .HasColumnType("nvarchar(max)");
 
@@ -1380,11 +1394,13 @@ namespace HRManagement.Migrations
 
                     b.HasIndex("ReviewedBy");
 
+                    b.HasIndex("TargetApproverId");
+
                     b.HasIndex(new[] { "EmployeeId" }, "IX_OvertimeRequests_EmployeeID");
 
                     b.HasIndex(new[] { "Status" }, "IX_OvertimeRequests_Status");
 
-                    b.HasIndex(new[] { "RequestNumber" }, "UQ__Overtime__9ADA6BE0AE2DCA21")
+                    b.HasIndex(new[] { "CompanyId", "RequestNumber" }, "UQ__Overtime__9ADA6BE0AE2DCA21")
                         .IsUnique();
 
                     b.ToTable("OvertimeRequests");
@@ -1412,6 +1428,10 @@ namespace HRManagement.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
+
                     b.Property<string>("Description")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
@@ -1422,6 +1442,8 @@ namespace HRManagement.Migrations
 
                     b.HasKey("AllowanceId")
                         .HasName("PK__PayrollA__7B12D0418866292B");
+
+                    b.HasIndex("CompanyId");
 
                     b.HasIndex("PayrollRecordId");
 
@@ -1439,6 +1461,10 @@ namespace HRManagement.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<string>("DeductionName")
                         .IsRequired()
@@ -1461,9 +1487,67 @@ namespace HRManagement.Migrations
                     b.HasKey("DeductionId")
                         .HasName("PK__PayrollD__E2604C770050657D");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("PayrollRecordId");
 
                     b.ToTable("PayrollDeductions");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.PayrollFeedback", b =>
+                {
+                    b.Property<int>("FeedbackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FeedbackId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
+
+                    b.Property<string>("Content")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HrResponse")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsAgreed")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PayrollRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ResolvedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("FeedbackId");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("PayrollRecordId");
+
+                    b.HasIndex("ResolvedByUserId");
+
+                    b.ToTable("PayrollFeedbacks");
                 });
 
             modelBuilder.Entity("HRManagement.Models.PayrollPeriod", b =>
@@ -1475,22 +1559,41 @@ namespace HRManagement.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PeriodId"));
 
-                    b.Property<DateTime?>("AggregatedDate")
-                        .HasColumnType("datetime");
-
                     b.Property<int?>("ApprovedBy")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("ApprovedDate")
                         .HasColumnType("datetime");
 
+                    b.Property<DateOnly>("AttendanceCutoffDate")
+                        .HasColumnType("date");
+
                     b.Property<DateTime?>("CalculatedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date");
 
                     b.Property<int>("Month")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RejectedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RejectedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReviewDeadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ReviewWindowDays")
                         .HasColumnType("int");
 
                     b.Property<DateOnly>("StartDate")
@@ -1509,7 +1612,7 @@ namespace HRManagement.Migrations
                     b.HasKey("PeriodId")
                         .HasName("PK__PayrollP__E521BB362CCDBB5F");
 
-                    b.HasIndex(new[] { "Month", "Year" }, "UQ_PayrollPeriods")
+                    b.HasIndex(new[] { "CompanyId", "Month", "Year" }, "UQ_PayrollPeriods")
                         .IsUnique();
 
                     b.ToTable("PayrollPeriods");
@@ -1528,8 +1631,15 @@ namespace HRManagement.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<decimal>("BaseAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("CalculationFormula")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -1573,7 +1683,7 @@ namespace HRManagement.Migrations
                     b.HasKey("PolicyId")
                         .HasName("PK__PayrollP__2E133944C0C8A2B6");
 
-                    b.HasIndex(new[] { "PolicyName" }, "UQ__PayrollP__251851158851FA7E")
+                    b.HasIndex(new[] { "CompanyId", "PolicyName" }, "UQ__PayrollP__251851158851FA7E")
                         .IsUnique();
 
                     b.ToTable("PayrollPolicies");
@@ -1602,6 +1712,10 @@ namespace HRManagement.Migrations
 
                     b.Property<DateTime?>("CalculatedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int")
@@ -1649,6 +1763,8 @@ namespace HRManagement.Migrations
                     b.HasKey("PayrollRecordId")
                         .HasName("PK__PayrollR__17BE4B705331E66F");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex(new[] { "EmployeeId" }, "IX_PayrollRecords_EmployeeID");
 
                     b.HasIndex(new[] { "PeriodId" }, "IX_PayrollRecords_PeriodID");
@@ -1667,6 +1783,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("PayslipID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PayslipId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int")
@@ -1710,7 +1830,7 @@ namespace HRManagement.Migrations
 
                     b.HasIndex("PeriodId");
 
-                    b.HasIndex(new[] { "PayslipNumber" }, "UQ__Payslips__38A71BAD66586385")
+                    b.HasIndex(new[] { "CompanyId", "PayslipNumber" }, "UQ__Payslips__38A71BAD66586385")
                         .IsUnique();
 
                     b.ToTable("Payslips");
@@ -1725,29 +1845,36 @@ namespace HRManagement.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PermissionId"));
 
-                    b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("Module")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("PermissionCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("PermissionName")
+                    b.Property<string>("Category")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.HasKey("PermissionId")
-                        .HasName("PK__Permissi__EFA6FB0F5E14C46D");
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.HasIndex(new[] { "PermissionCode" }, "UQ__Permissi__91FE5750BA312855")
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("PermissionKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("PermissionId");
+
+                    b.HasIndex("PermissionKey")
                         .IsUnique();
 
                     b.ToTable("Permissions");
@@ -1761,6 +1888,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("PositionID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PositionId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -1778,6 +1909,11 @@ namespace HRManagement.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<bool>("IsTopLevel")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("Level")
                         .ValueGeneratedOnAdd()
@@ -1803,10 +1939,89 @@ namespace HRManagement.Migrations
                     b.HasKey("PositionId")
                         .HasName("PK__Position__60BB9A59726208B5");
 
-                    b.HasIndex(new[] { "PositionCode" }, "UQ__Position__83745B02ABEA23B6")
+                    b.HasIndex(new[] { "CompanyId", "PositionCode" }, "UQ__Position__83745B02ABEA23B6")
                         .IsUnique();
 
                     b.ToTable("Positions");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.ResignationRequest", b =>
+                {
+                    b.Property<int>("ResignationRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ResignationRequestId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("ExpectedLastWorkingDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("HandoverNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("HandoverToEmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RequestNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int?>("ReviewedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("ReviewerComments")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime>("SubmittedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int?>("TargetApproverId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ResignationRequestId");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("HandoverToEmployeeId");
+
+                    b.HasIndex("ReviewedBy");
+
+                    b.HasIndex("TargetApproverId");
+
+                    b.HasIndex("CompanyId", "RequestNumber")
+                        .IsUnique();
+
+                    b.ToTable("ResignationRequests");
                 });
 
             modelBuilder.Entity("HRManagement.Models.Role", b =>
@@ -1817,6 +2032,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("RoleID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -1849,10 +2068,27 @@ namespace HRManagement.Migrations
                     b.HasKey("RoleId")
                         .HasName("PK__Roles__8AFACE3A81AE763D");
 
-                    b.HasIndex(new[] { "RoleName" }, "UQ__Roles__8A2B6160EED0EB46")
+                    b.HasIndex(new[] { "CompanyId", "RoleName" }, "UQ__Roles__8A2B6160EED0EB46")
                         .IsUnique();
 
                     b.ToTable("Roles");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.RoleMenu", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int")
+                        .HasColumnName("RoleID");
+
+                    b.Property<int>("MenuId")
+                        .HasColumnType("int")
+                        .HasColumnName("MenuID");
+
+                    b.HasKey("RoleId", "MenuId");
+
+                    b.HasIndex("MenuId");
+
+                    b.ToTable("RoleMenus");
                 });
 
             modelBuilder.Entity("HRManagement.Models.RolePermission", b =>
@@ -1864,11 +2100,6 @@ namespace HRManagement.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RolePermissionId"));
 
-                    b.Property<DateTime>("GrantedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
-
                     b.Property<int>("PermissionId")
                         .HasColumnType("int")
                         .HasColumnName("PermissionID");
@@ -1877,8 +2108,7 @@ namespace HRManagement.Migrations
                         .HasColumnType("int")
                         .HasColumnName("RoleID");
 
-                    b.HasKey("RolePermissionId")
-                        .HasName("PK__RolePerm__120F469AE264C887");
+                    b.HasKey("RolePermissionId");
 
                     b.HasIndex("PermissionId");
 
@@ -1896,6 +2126,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("ShiftID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ShiftId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -1957,7 +2191,7 @@ namespace HRManagement.Migrations
                     b.HasKey("ShiftId")
                         .HasName("PK__Shifts__C0A838E11F3BCF8E");
 
-                    b.HasIndex(new[] { "ShiftCode" }, "UQ__Shifts__9377D5623409151A")
+                    b.HasIndex(new[] { "CompanyId", "ShiftCode" }, "UQ__Shifts__9377D5623409151A")
                         .IsUnique();
 
                     b.ToTable("Shifts");
@@ -1974,6 +2208,10 @@ namespace HRManagement.Migrations
 
                     b.Property<DateOnly>("AssignmentDate")
                         .HasColumnType("date");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -2011,9 +2249,11 @@ namespace HRManagement.Migrations
                     b.HasKey("AssignmentId")
                         .HasName("PK__ShiftAss__32499E573BC5AE0C");
 
-                    b.HasIndex("EmployeeId");
-
                     b.HasIndex("ShiftId");
+
+                    b.HasIndex(new[] { "CompanyId", "AssignmentDate" }, "IX_ShiftAssignments_Company_Date");
+
+                    b.HasIndex(new[] { "EmployeeId", "AssignmentDate" }, "IX_ShiftAssignments_Employee_Date");
 
                     b.ToTable("ShiftAssignments");
                 });
@@ -2026,6 +2266,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("SettingID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SettingId"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -2055,7 +2299,7 @@ namespace HRManagement.Migrations
                     b.HasKey("SettingId")
                         .HasName("PK__SystemSe__54372AFD0CC988E3");
 
-                    b.HasIndex(new[] { "SettingKey" }, "UQ__SystemSe__01E719AD19FD850C")
+                    b.HasIndex(new[] { "CompanyId", "SettingKey" }, "UQ__SystemSe__01E719AD19FD850C")
                         .IsUnique();
 
                     b.ToTable("SystemSettings");
@@ -2072,6 +2316,10 @@ namespace HRManagement.Migrations
 
                     b.Property<int>("AssignedTo")
                         .HasColumnType("int");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CompletedBy")
                         .HasColumnType("int");
@@ -2131,6 +2379,8 @@ namespace HRManagement.Migrations
                     b.HasKey("TaskId")
                         .HasName("PK__Tasks__7C6949D1D79FA7B9");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex(new[] { "AssignedTo" }, "IX_Tasks_AssignedTo");
 
                     b.HasIndex(new[] { "DueDate" }, "IX_Tasks_DueDate");
@@ -2148,6 +2398,10 @@ namespace HRManagement.Migrations
                         .HasColumnName("UserID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+
+                    b.Property<int?>("CompanyId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyID");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
@@ -2198,6 +2452,8 @@ namespace HRManagement.Migrations
 
                     b.HasKey("UserId")
                         .HasName("PK__Users__1788CCACE4BDE2F5");
+
+                    b.HasIndex("CompanyId");
 
                     b.HasIndex(new[] { "Email" }, "IX_Users_Email");
 
@@ -2250,153 +2506,15 @@ namespace HRManagement.Migrations
                     b.ToTable("UserRoles");
                 });
 
-            modelBuilder.Entity("HRManagement.Models.Workflow", b =>
-                {
-                    b.Property<int>("WorkflowId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("WorkflowID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WorkflowId"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateOnly?>("EffectiveDate")
-                        .HasColumnType("date");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ModifiedDate")
-                        .HasColumnType("datetime");
-
-                    b.Property<string>("WorkflowName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("WorkflowType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("WorkflowId")
-                        .HasName("PK__Workflow__5704A64A3D49BE3D");
-
-                    b.HasIndex(new[] { "WorkflowName" }, "UQ__Workflow__DC0E2DEB3E5F53DE")
-                        .IsUnique();
-
-                    b.ToTable("Workflows");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.WorkflowStage", b =>
-                {
-                    b.Property<int>("StageId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("StageID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StageId"));
-
-                    b.Property<string>("ApprovalType")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Single");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<bool>("IsAutoApprove")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("StageName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("StageOrder")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TimeoutHours")
-                        .HasColumnType("int");
-
-                    b.Property<int>("WorkflowId")
-                        .HasColumnType("int")
-                        .HasColumnName("WorkflowID");
-
-                    b.HasKey("StageId")
-                        .HasName("PK__Workflow__03EB7AF8A9676CB7");
-
-                    b.HasIndex(new[] { "WorkflowId", "StageOrder" }, "UQ_WorkflowStages")
-                        .IsUnique();
-
-                    b.ToTable("WorkflowStages");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.WorkflowStageApprover", b =>
-                {
-                    b.Property<int>("StageApproverId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("StageApproverID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StageApproverId"));
-
-                    b.Property<int>("ApproverType")
-                        .HasColumnType("int");
-
-                    b.Property<string>("DynamicRule")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsDynamic")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("RoleId")
-                        .HasColumnType("int")
-                        .HasColumnName("RoleID");
-
-                    b.Property<int>("StageId")
-                        .HasColumnType("int")
-                        .HasColumnName("StageID");
-
-                    b.Property<int?>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("UserID");
-
-                    b.HasKey("StageApproverId")
-                        .HasName("PK__Workflow__78C865916C818D3D");
-
-                    b.HasIndex("RoleId");
-
-                    b.HasIndex("StageId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("WorkflowStageApprovers");
-                });
-
             modelBuilder.Entity("HRManagement.Models.AttendanceLog", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_AttendanceLogs_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
@@ -2415,11 +2533,23 @@ namespace HRManagement.Migrations
 
             modelBuilder.Entity("HRManagement.Models.AttendanceRecord", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_AttendanceRecords_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("AttendanceRecords")
                         .HasForeignKey("EmployeeId")
                         .IsRequired()
                         .HasConstraintName("FK_AttendanceRecords_Employees");
+
+                    b.HasOne("HRManagement.Models.LeaveType", "ExplanationLeaveType")
+                        .WithMany()
+                        .HasForeignKey("ExplanationLeaveTypeId")
+                        .HasConstraintName("FK_AttendanceRecords_ExplanationLeaveTypes");
 
                     b.HasOne("HRManagement.Models.Shift", "Shift")
                         .WithMany("AttendanceRecords")
@@ -2428,11 +2558,20 @@ namespace HRManagement.Migrations
 
                     b.Navigation("Employee");
 
+                    b.Navigation("ExplanationLeaveType");
+
                     b.Navigation("Shift");
                 });
 
             modelBuilder.Entity("HRManagement.Models.AuditLog", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_AuditLogs_Companies");
+
                     b.HasOne("HRManagement.Models.User", "User")
                         .WithMany("AuditLogs")
                         .HasForeignKey("UserId")
@@ -2443,6 +2582,13 @@ namespace HRManagement.Migrations
 
             modelBuilder.Entity("HRManagement.Models.Department", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Departments_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Manager")
                         .WithMany()
                         .HasForeignKey("ManagerId")
@@ -2460,6 +2606,13 @@ namespace HRManagement.Migrations
 
             modelBuilder.Entity("HRManagement.Models.Employee", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Employees_Companies");
+
                     b.HasOne("HRManagement.Models.Department", "Department")
                         .WithMany("Employees")
                         .HasForeignKey("DepartmentId")
@@ -2484,6 +2637,13 @@ namespace HRManagement.Migrations
 
             modelBuilder.Entity("HRManagement.Models.EmployeeContract", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_EmployeeContracts_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("EmployeeContracts")
                         .HasForeignKey("EmployeeId")
@@ -2495,6 +2655,13 @@ namespace HRManagement.Migrations
 
             modelBuilder.Entity("HRManagement.Models.EmployeeDocument", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_EmployeeDocuments_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("EmployeeDocuments")
                         .HasForeignKey("EmployeeId")
@@ -2504,79 +2671,15 @@ namespace HRManagement.Migrations
                     b.Navigation("Employee");
                 });
 
-            modelBuilder.Entity("HRManagement.Models.Evaluation", b =>
-                {
-                    b.HasOne("HRManagement.Models.EvaluationCycle", "Cycle")
-                        .WithMany("Evaluations")
-                        .HasForeignKey("CycleId")
-                        .IsRequired()
-                        .HasConstraintName("FK_Evaluations_Cycles");
-
-                    b.HasOne("HRManagement.Models.Employee", "Employee")
-                        .WithMany("EvaluationEmployees")
-                        .HasForeignKey("EmployeeId")
-                        .IsRequired()
-                        .HasConstraintName("FK_Evaluations_Employees");
-
-                    b.HasOne("HRManagement.Models.Employee", "PrimaryEvaluator")
-                        .WithMany("EvaluationPrimaryEvaluators")
-                        .HasForeignKey("PrimaryEvaluatorId")
-                        .HasConstraintName("FK_Evaluations_PrimaryEvaluator");
-
-                    b.HasOne("HRManagement.Models.Employee", "SecondaryEvaluator")
-                        .WithMany("EvaluationSecondaryEvaluators")
-                        .HasForeignKey("SecondaryEvaluatorId")
-                        .HasConstraintName("FK_Evaluations_SecondaryEvaluator");
-
-                    b.HasOne("HRManagement.Models.EvaluationTemplate", "Template")
-                        .WithMany("Evaluations")
-                        .HasForeignKey("TemplateId")
-                        .IsRequired()
-                        .HasConstraintName("FK_Evaluations_Templates");
-
-                    b.Navigation("Cycle");
-
-                    b.Navigation("Employee");
-
-                    b.Navigation("PrimaryEvaluator");
-
-                    b.Navigation("SecondaryEvaluator");
-
-                    b.Navigation("Template");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationCriterion", b =>
-                {
-                    b.HasOne("HRManagement.Models.EvaluationTemplate", "Template")
-                        .WithMany("EvaluationCriteria")
-                        .HasForeignKey("TemplateId")
-                        .IsRequired()
-                        .HasConstraintName("FK_EvaluationCriteria_Templates");
-
-                    b.Navigation("Template");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationRating", b =>
-                {
-                    b.HasOne("HRManagement.Models.EvaluationCriterion", "Criteria")
-                        .WithMany("EvaluationRatings")
-                        .HasForeignKey("CriteriaId")
-                        .IsRequired()
-                        .HasConstraintName("FK_EvaluationRatings_Criteria");
-
-                    b.HasOne("HRManagement.Models.Evaluation", "Evaluation")
-                        .WithMany("EvaluationRatings")
-                        .HasForeignKey("EvaluationId")
-                        .IsRequired()
-                        .HasConstraintName("FK_EvaluationRatings_Evaluations");
-
-                    b.Navigation("Criteria");
-
-                    b.Navigation("Evaluation");
-                });
-
             modelBuilder.Entity("HRManagement.Models.FaceProfile", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_FaceProfiles_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
@@ -2592,6 +2695,13 @@ namespace HRManagement.Migrations
                         .WithMany()
                         .HasForeignKey("AttendanceLogId");
 
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_FaceVerificationLogs_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
@@ -2603,8 +2713,31 @@ namespace HRManagement.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("HRManagement.Models.Holiday", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Holidays_Companies");
+                });
+
             modelBuilder.Entity("HRManagement.Models.Hrprocedure", b =>
                 {
+                    b.HasOne("HRManagement.Models.Employee", "AppliedByNavigation")
+                        .WithMany()
+                        .HasForeignKey("AppliedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_HRProcedures_AppliedBy");
+
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_HRProcedures_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("Hrprocedures")
                         .HasForeignKey("EmployeeId")
@@ -2616,20 +2749,37 @@ namespace HRManagement.Migrations
                         .HasForeignKey("NewDepartmentId")
                         .HasConstraintName("FK_HRProcedures_NewDepartment");
 
+                    b.HasOne("HRManagement.Models.Employee", "NewManager")
+                        .WithMany()
+                        .HasForeignKey("NewManagerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_HRProcedures_NewManager");
+
                     b.HasOne("HRManagement.Models.Position", "NewPosition")
                         .WithMany("Hrprocedures")
                         .HasForeignKey("NewPositionId")
                         .HasConstraintName("FK_HRProcedures_NewPosition");
 
+                    b.Navigation("AppliedByNavigation");
+
                     b.Navigation("Employee");
 
                     b.Navigation("NewDepartment");
+
+                    b.Navigation("NewManager");
 
                     b.Navigation("NewPosition");
                 });
 
             modelBuilder.Entity("HRManagement.Models.LeaveBalance", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_LeaveBalances_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("LeaveBalances")
                         .HasForeignKey("EmployeeId")
@@ -2654,6 +2804,13 @@ namespace HRManagement.Migrations
                         .HasForeignKey("ApprovedBy")
                         .HasConstraintName("FK_LeaveRequests_ApprovedBy");
 
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_LeaveRequests_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("LeaveRequests")
                         .HasForeignKey("EmployeeId")
@@ -2671,6 +2828,11 @@ namespace HRManagement.Migrations
                         .HasForeignKey("ReviewedBy")
                         .HasConstraintName("FK_LeaveRequests_ReviewedBy");
 
+                    b.HasOne("HRManagement.Models.User", "TargetApprover")
+                        .WithMany()
+                        .HasForeignKey("TargetApproverId")
+                        .HasConstraintName("FK_LeaveRequests_TargetApprover");
+
                     b.Navigation("ApprovedByNavigation");
 
                     b.Navigation("Employee");
@@ -2678,10 +2840,40 @@ namespace HRManagement.Migrations
                     b.Navigation("LeaveType");
 
                     b.Navigation("ReviewedByNavigation");
+
+                    b.Navigation("TargetApprover");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.LeaveType", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_LeaveTypes_Companies");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.Menu", b =>
+                {
+                    b.HasOne("HRManagement.Models.Menu", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Menus_Parent");
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("HRManagement.Models.Notification", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Notifications_Companies");
+
                     b.HasOne("HRManagement.Models.User", "RecipientUser")
                         .WithMany("Notifications")
                         .HasForeignKey("RecipientUserId")
@@ -2698,6 +2890,13 @@ namespace HRManagement.Migrations
                         .HasForeignKey("ApprovedBy")
                         .HasConstraintName("FK_OvertimeRequests_ApprovedBy");
 
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_OvertimeRequests_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("OvertimeRequests")
                         .HasForeignKey("EmployeeId")
@@ -2709,15 +2908,29 @@ namespace HRManagement.Migrations
                         .HasForeignKey("ReviewedBy")
                         .HasConstraintName("FK_OvertimeRequests_ReviewedBy");
 
+                    b.HasOne("HRManagement.Models.User", "TargetApprover")
+                        .WithMany()
+                        .HasForeignKey("TargetApproverId")
+                        .HasConstraintName("FK_OvertimeRequests_TargetApprover");
+
                     b.Navigation("ApprovedByNavigation");
 
                     b.Navigation("Employee");
 
                     b.Navigation("ReviewedByNavigation");
+
+                    b.Navigation("TargetApprover");
                 });
 
             modelBuilder.Entity("HRManagement.Models.PayrollAllowance", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PayrollAllowances_Companies");
+
                     b.HasOne("HRManagement.Models.PayrollRecord", "PayrollRecord")
                         .WithMany("PayrollAllowances")
                         .HasForeignKey("PayrollRecordId")
@@ -2729,6 +2942,13 @@ namespace HRManagement.Migrations
 
             modelBuilder.Entity("HRManagement.Models.PayrollDeduction", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PayrollDeductions_Companies");
+
                     b.HasOne("HRManagement.Models.PayrollRecord", "PayrollRecord")
                         .WithMany("PayrollDeductions")
                         .HasForeignKey("PayrollRecordId")
@@ -2738,8 +2958,67 @@ namespace HRManagement.Migrations
                     b.Navigation("PayrollRecord");
                 });
 
+            modelBuilder.Entity("HRManagement.Models.PayrollFeedback", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PayrollFeedbacks_Companies");
+
+                    b.HasOne("HRManagement.Models.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HRManagement.Models.PayrollRecord", "PayrollRecord")
+                        .WithMany()
+                        .HasForeignKey("PayrollRecordId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HRManagement.Models.User", "ResolvedByUser")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByUserId");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("PayrollRecord");
+
+                    b.Navigation("ResolvedByUser");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.PayrollPeriod", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PayrollPeriods_Companies");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.PayrollPolicy", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PayrollPolicies_Companies");
+                });
+
             modelBuilder.Entity("HRManagement.Models.PayrollRecord", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PayrollRecords_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("PayrollRecords")
                         .HasForeignKey("EmployeeId")
@@ -2759,6 +3038,13 @@ namespace HRManagement.Migrations
 
             modelBuilder.Entity("HRManagement.Models.Payslip", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Payslips_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("Payslips")
                         .HasForeignKey("EmployeeId")
@@ -2784,17 +3070,99 @@ namespace HRManagement.Migrations
                     b.Navigation("Period");
                 });
 
+            modelBuilder.Entity("HRManagement.Models.Position", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Positions_Companies");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.ResignationRequest", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_ResignationRequests_Companies");
+
+                    b.HasOne("HRManagement.Models.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .IsRequired()
+                        .HasConstraintName("FK_ResignationRequests_Employees");
+
+                    b.HasOne("HRManagement.Models.Employee", "HandoverToEmployee")
+                        .WithMany()
+                        .HasForeignKey("HandoverToEmployeeId")
+                        .HasConstraintName("FK_ResignationRequests_HandoverEmployee");
+
+                    b.HasOne("HRManagement.Models.User", "ReviewedByNavigation")
+                        .WithMany()
+                        .HasForeignKey("ReviewedBy")
+                        .HasConstraintName("FK_ResignationRequests_ReviewedBy");
+
+                    b.HasOne("HRManagement.Models.User", "TargetApprover")
+                        .WithMany()
+                        .HasForeignKey("TargetApproverId")
+                        .HasConstraintName("FK_ResignationRequests_TargetApprover");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("HandoverToEmployee");
+
+                    b.Navigation("ReviewedByNavigation");
+
+                    b.Navigation("TargetApprover");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.Role", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Roles_Companies");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.RoleMenu", b =>
+                {
+                    b.HasOne("HRManagement.Models.Menu", "Menu")
+                        .WithMany("RoleMenus")
+                        .HasForeignKey("MenuId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_RoleMenus_Menus");
+
+                    b.HasOne("HRManagement.Models.Role", "Role")
+                        .WithMany("RoleMenus")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_RoleMenus_Roles");
+
+                    b.Navigation("Menu");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("HRManagement.Models.RolePermission", b =>
                 {
                     b.HasOne("HRManagement.Models.Permission", "Permission")
                         .WithMany("RolePermissions")
                         .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK_RolePermissions_Permissions");
 
                     b.HasOne("HRManagement.Models.Role", "Role")
                         .WithMany("RolePermissions")
                         .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK_RolePermissions_Roles");
 
@@ -2803,8 +3171,25 @@ namespace HRManagement.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("HRManagement.Models.Shift", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Shifts_Companies");
+                });
+
             modelBuilder.Entity("HRManagement.Models.ShiftAssignment", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_ShiftAssignments_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("ShiftAssignments")
                         .HasForeignKey("EmployeeId")
@@ -2822,6 +3207,16 @@ namespace HRManagement.Migrations
                     b.Navigation("Shift");
                 });
 
+            modelBuilder.Entity("HRManagement.Models.SystemSetting", b =>
+                {
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SystemSettings_Companies");
+                });
+
             modelBuilder.Entity("HRManagement.Models.Task", b =>
                 {
                     b.HasOne("HRManagement.Models.User", "AssignedToNavigation")
@@ -2830,15 +3225,30 @@ namespace HRManagement.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_Tasks_AssignedTo");
 
+                    b.HasOne("HRManagement.Models.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Tasks_Companies");
+
                     b.Navigation("AssignedToNavigation");
                 });
 
             modelBuilder.Entity("HRManagement.Models.User", b =>
                 {
+                    b.HasOne("HRManagement.Models.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Users_Companies");
+
                     b.HasOne("HRManagement.Models.Employee", "Employee")
                         .WithMany("Users")
                         .HasForeignKey("EmployeeId")
                         .HasConstraintName("FK_Users_Employees");
+
+                    b.Navigation("Company");
 
                     b.Navigation("Employee");
                 });
@@ -2862,42 +3272,6 @@ namespace HRManagement.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("HRManagement.Models.WorkflowStage", b =>
-                {
-                    b.HasOne("HRManagement.Models.Workflow", "Workflow")
-                        .WithMany("WorkflowStages")
-                        .HasForeignKey("WorkflowId")
-                        .IsRequired()
-                        .HasConstraintName("FK_WorkflowStages_Workflows");
-
-                    b.Navigation("Workflow");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.WorkflowStageApprover", b =>
-                {
-                    b.HasOne("HRManagement.Models.Role", "Role")
-                        .WithMany("WorkflowStageApprovers")
-                        .HasForeignKey("RoleId")
-                        .HasConstraintName("FK_StageApprovers_Roles");
-
-                    b.HasOne("HRManagement.Models.WorkflowStage", "Stage")
-                        .WithMany("WorkflowStageApprovers")
-                        .HasForeignKey("StageId")
-                        .IsRequired()
-                        .HasConstraintName("FK_StageApprovers_Stages");
-
-                    b.HasOne("HRManagement.Models.User", "User")
-                        .WithMany("WorkflowStageApprovers")
-                        .HasForeignKey("UserId")
-                        .HasConstraintName("FK_StageApprovers_Users");
-
-                    b.Navigation("Role");
-
-                    b.Navigation("Stage");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("HRManagement.Models.Department", b =>
                 {
                     b.Navigation("Employees");
@@ -2914,12 +3288,6 @@ namespace HRManagement.Migrations
                     b.Navigation("EmployeeContracts");
 
                     b.Navigation("EmployeeDocuments");
-
-                    b.Navigation("EvaluationEmployees");
-
-                    b.Navigation("EvaluationPrimaryEvaluators");
-
-                    b.Navigation("EvaluationSecondaryEvaluators");
 
                     b.Navigation("Hrprocedures");
 
@@ -2940,33 +3308,18 @@ namespace HRManagement.Migrations
                     b.Navigation("Users");
                 });
 
-            modelBuilder.Entity("HRManagement.Models.Evaluation", b =>
-                {
-                    b.Navigation("EvaluationRatings");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationCriterion", b =>
-                {
-                    b.Navigation("EvaluationRatings");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationCycle", b =>
-                {
-                    b.Navigation("Evaluations");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.EvaluationTemplate", b =>
-                {
-                    b.Navigation("EvaluationCriteria");
-
-                    b.Navigation("Evaluations");
-                });
-
             modelBuilder.Entity("HRManagement.Models.LeaveType", b =>
                 {
                     b.Navigation("LeaveBalances");
 
                     b.Navigation("LeaveRequests");
+                });
+
+            modelBuilder.Entity("HRManagement.Models.Menu", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("RoleMenus");
                 });
 
             modelBuilder.Entity("HRManagement.Models.PayrollPeriod", b =>
@@ -2999,11 +3352,11 @@ namespace HRManagement.Migrations
 
             modelBuilder.Entity("HRManagement.Models.Role", b =>
                 {
+                    b.Navigation("RoleMenus");
+
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
-
-                    b.Navigation("WorkflowStageApprovers");
                 });
 
             modelBuilder.Entity("HRManagement.Models.Shift", b =>
@@ -3030,18 +3383,6 @@ namespace HRManagement.Migrations
                     b.Navigation("Tasks");
 
                     b.Navigation("UserRoles");
-
-                    b.Navigation("WorkflowStageApprovers");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.Workflow", b =>
-                {
-                    b.Navigation("WorkflowStages");
-                });
-
-            modelBuilder.Entity("HRManagement.Models.WorkflowStage", b =>
-                {
-                    b.Navigation("WorkflowStageApprovers");
                 });
 #pragma warning restore 612, 618
         }

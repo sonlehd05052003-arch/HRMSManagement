@@ -147,6 +147,16 @@ dotnet tool install --global dotnet-ef
 dotnet ef database update
 ```
 
+Một database mới được tạo đầy đủ bảng và dữ liệu mẫu (quyền, menu, công ty mẫu số 1). Tài khoản SuperAdmin được tạo
+khi API khởi động, theo mục `SuperAdmin` trong `appsettings.json`.
+
+> **Database tạo trước ngày 14/10/2026** (đã chạy các migration cũ, tới `AddHolidays`): lịch sử migration đã được gộp
+> lại thành `InitialSchema` + `SeedTemplateData`. Chạy một lần script sau trước khi `dotnet ef database update`;
+> script chỉ sửa bảng `__EFMigrationsHistory`, không đụng tới dữ liệu:
+> ```bash
+> sqlcmd -S localhost -E -d HRMS_DB -i Tools/squash-migration-history.sql
+> ```
+
 ### 4. Khởi Chạy Ứng Dụng
 Sử dụng CLI để chạy dự án:
 ```bash
